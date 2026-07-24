@@ -27,7 +27,7 @@
         <div class="blob blob-3"></div>
 
         <nav>
-            <div class="logo">
+            <div class="logo" id="logoBtn" style="cursor: pointer;" title="Show App QR Code">
                 <i data-lucide="zap" class="logo-icon"></i>
                 <span>DropLink</span>
             </div>
@@ -186,6 +186,19 @@
         </footer>
     </div>
     </div><!-- Close App-Container -->
+
+    <!-- Modal: Logo QR -->
+    <div id="logoQrModal" class="modal hidden">
+        <div class="modal-content">
+            <i data-lucide="smartphone" class="modal-icon"></i>
+            <h2>Share DropLink</h2>
+            <p class="modal-desc">Scan to open this app on another device</p>
+            <div class="qr-container" id="logoQrCodeContainer" style="margin: 20px auto; width: fit-content;"></div>
+            <div class="modal-actions" style="justify-content: center;">
+                <button id="closeLogoQrBtn" class="primary-btn">Close</button>
+            </div>
+        </div>
+    </div>
 
     <!-- Modal: QR Scanner -->
     <div id="scanModal" class="modal hidden">

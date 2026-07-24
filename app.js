@@ -549,5 +549,39 @@ methodIcons.forEach(icon => {
     });
 });
 
+// --- Logo QR Modal Logic ---
+const logoBtn = document.getElementById('logoBtn');
+const logoQrModal = document.getElementById('logoQrModal');
+const closeLogoQrBtn = document.getElementById('closeLogoQrBtn');
+const logoQrCodeContainer = document.getElementById('logoQrCodeContainer');
+let logoQrInstance = null;
+
+logoBtn.addEventListener('click', () => {
+    logoQrModal.classList.remove('hidden');
+    
+    // Generate URL including Peer ID if available
+    const baseUrl = window.location.origin + window.location.pathname;
+    const text = baseUrl + (myPeerId ? '#' + myPeerId : '');
+    
+    if (!logoQrInstance) {
+        logoQrInstance = new QRCode(logoQrCodeContainer, {
+            text: text,
+            width: 180,
+            height: 180,
+            colorDark : "#0f172a",
+            colorLight : "#ffffff",
+            correctLevel : QRCode.CorrectLevel.H
+        });
+    } else {
+        logoQrInstance.clear();
+        logoQrInstance.makeCode(text);
+    }
+});
+
+closeLogoQrBtn.addEventListener('click', () => {
+    logoQrModal.classList.add('hidden');
+});
+
 // Initial Start
 initPeer();
+
