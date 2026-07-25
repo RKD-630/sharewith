@@ -1,9 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DropLink - Premium P2P File Sharing</title>
+    <title>Share With - Premium P2P File Sharing</title>
     <meta name="description" content="Secure, high-speed peer-to-peer file sharing directly from your browser.">
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -19,6 +20,7 @@
     <script src="https://unpkg.com/lucide@latest"></script>
     <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
     <div class="app-container">
         <!-- Background decorative elements -->
@@ -29,7 +31,7 @@
         <nav>
             <div class="logo" id="logoBtn" style="cursor: pointer;" title="Show App QR Code">
                 <i data-lucide="zap" class="logo-icon"></i>
-                <span>DropLink</span>
+                <span>Share With</span>
             </div>
             <div class="connection-status" id="connectionStatus">
                 <span class="status-dot offline"></span>
@@ -71,7 +73,7 @@
                             <button class="qr-toggle-btn active" id="qrIdBtn">Connection ID</button>
                             <button class="qr-toggle-btn" id="qrUrlBtn">Site Location</button>
                         </div>
-                        
+
                         <div id="urlDisplay" class="url-display hidden">
                             <span class="url-label">App Location:</span>
                             <code id="siteLocationCode">https://ewckanpurtender-wq.github.io/Sharewith/</code>
@@ -93,7 +95,8 @@
                     <div class="share-box">
                         <p class="receive-instruction">Enter the sender's ID or scan their QR code to connect.</p>
                         <div class="input-group">
-                            <input type="text" id="targetIdInput" placeholder="Sender ID (e.g. 123-456)" autocomplete="off">
+                            <input type="text" id="targetIdInput" placeholder="Sender ID (e.g. 123-456)"
+                                autocomplete="off">
                             <button id="connectBtn" class="primary-btn">
                                 <i data-lucide="link"></i> Connect
                             </button>
@@ -176,8 +179,10 @@
             <div class="p2p-methods">
                 <span id="methodLabel">Auto-Connect via Optimized P2P:</span>
                 <div class="method-icons">
-                    <i data-lucide="zap" class="method-icon active" title="Smart Connect" data-method="Smart Connect"></i>
-                    <i data-lucide="wifi" class="method-icon" title="Local Wi-Fi / Hotspot" data-method="Local Wi-Fi"></i>
+                    <i data-lucide="zap" class="method-icon active" title="Smart Connect"
+                        data-method="Smart Connect"></i>
+                    <i data-lucide="wifi" class="method-icon" title="Local Wi-Fi / Hotspot"
+                        data-method="Local Wi-Fi"></i>
                     <i data-lucide="bluetooth" class="method-icon" title="Bluetooth Mode" data-method="Bluetooth"></i>
                     <i data-lucide="globe" class="method-icon" title="VPN / Global IP" data-method="Global Link"></i>
                 </div>
@@ -191,7 +196,7 @@
     <div id="logoQrModal" class="modal hidden">
         <div class="modal-content">
             <i data-lucide="smartphone" class="modal-icon"></i>
-            <h2>Share DropLink</h2>
+            <h2>Share App</h2>
             <p class="modal-desc">Scan to open this app on another device</p>
             <div class="qr-container" id="logoQrCodeContainer" style="margin: 20px auto; width: fit-content;"></div>
             <div class="modal-actions" style="justify-content: center;">
@@ -218,4 +223,5 @@
     <div id="toastContainer" class="toast-container"></div>
     <script src="app.js"></script>
 </body>
+
 </html>
