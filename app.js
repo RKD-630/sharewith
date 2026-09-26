@@ -79,9 +79,24 @@ function initPeer() {
 
     peer.on('error', (err) => {
         console.error('Peer error:', err);
+        if (err.type === 'peer-unavailable') {
+            showToast("Device not found. Please verify the Connection ID or QR code.", "error");
+            if (transferZone) transferZone.classList.add('hidden');
+            if (radarContainer) radarContainer.classList.add('hidden');
+            return;
+        }
+        if (err.type === 'unavailable-id') {
+            setTimeout(initPeer, 500);
+            return;
+        }
         statusDot.className = 'status-dot offline';
         statusText.textContent = 'Offline (Retry in 5s)';
-        setTimeout(initPeer, 5000);
+        setTimeout(() => {
+            if (peer && !peer.destroyed) {
+                try { peer.destroy(); } catch (e) {}
+            }
+            initPeer();
+        }, 5000);
     });
 
     // Handle Incoming Connection
@@ -516,15 +531,19 @@ document.getElementById('copyIdBtn').addEventListener('click', () => {
 
 // Manual Connect Button
 connectBtn.addEventListener('click', () => {
-    const targetId = targetIdInput.value.trim();
-    if (targetId) {
-        if (currentFiles.length > 0) {
-            initiateSend(targetId);
-        } else {
-            initiateReceive(targetId);
-        }
+    const targetId = targetIdInput.value.trim().toUpperCase();
+    if (!targetId) {
+        showToast("Enter the ID of the receiver.", "error");
+        return;
+    }
+    if (myPeerId && targetId === myPeerId.toUpperCase()) {
+        showToast("Cannot connect to your own device ID.", "error");
+        return;
+    }
+    if (currentFiles.length > 0) {
+        initiateSend(targetId);
     } else {
-        showToast("Enter the ID of the receiver.");
+        initiateReceive(targetId);
     }
 });
 
@@ -582,6 +601,162 @@ closeLogoQrBtn.addEventListener('click', () => {
     logoQrModal.classList.add('hidden');
 });
 
+// --- Help & Connection Guide Modal Logic ---
+const syncHelpBtn = document.getElementById('syncHelpBtn');
+const helpGuideModal = document.getElementById('helpGuideModal');
+const closeHelpGuideBtn = document.getElementById('closeHelpGuideBtn');
+const closeHelpGuideBtn2 = document.getElementById('closeHelpGuideBtn2');
+
+function openHelpGuide() {
+    if (!helpGuideModal) return;
+    helpGuideModal.classList.remove('hidden');
+    syncActiveGuideMethod();
+    lucide.createIcons();
+}
+
+function closeHelpGuide() {
+    if (!helpGuideModal) return;
+    helpGuideModal.classList.add('hidden');
+}
+
+if (syncHelpBtn) {
+    syncHelpBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        openHelpGuide();
+    });
+}
+
+if (closeHelpGuideBtn) closeHelpGuideBtn.addEventListener('click', closeHelpGuide);
+if (closeHelpGuideBtn2) closeHelpGuideBtn2.addEventListener('click', closeHelpGuide);
+
+if (helpGuideModal) {
+    helpGuideModal.addEventListener('click', (e) => {
+        if (e.target === helpGuideModal) {
+            closeHelpGuide();
+        }
+    });
+}
+
+// Sync active method with guide cards
+function syncActiveGuideMethod() {
+    const activeIcon = document.querySelector('.method-icon.active');
+    const activeMethod = activeIcon ? activeIcon.dataset.method : 'Smart Connect';
+    
+    document.querySelectorAll('.help-option-card').forEach(card => {
+        const cardMethod = card.getAttribute('data-guide-method');
+        const btnSpan = card.querySelector('.option-select-btn span');
+        if (cardMethod === activeMethod) {
+            card.classList.add('active');
+            if (btnSpan) btnSpan.textContent = 'Active Mode';
+        } else {
+            card.classList.remove('active');
+            if (btnSpan) btnSpan.textContent = `Activate ${cardMethod}`;
+        }
+    });
+}
+
+// Method selection from help guide
+document.querySelectorAll('.option-select-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const targetMethod = btn.getAttribute('data-method-target');
+        if (targetMethod) {
+            methodIcons.forEach(icon => {
+                if (icon.dataset.method === targetMethod) {
+                    icon.classList.add('active');
+                } else {
+                    icon.classList.remove('active');
+                }
+            });
+            methodLabel.textContent = `Optimizing for ${targetMethod}...`;
+            showToast(`Switched to ${targetMethod} mode`);
+            syncActiveGuideMethod();
+        }
+    });
+});
+
+// Allow clicking the card directly
+document.querySelectorAll('.help-option-card').forEach(card => {
+    card.addEventListener('click', () => {
+        const targetMethod = card.getAttribute('data-guide-method');
+        if (targetMethod) {
+            methodIcons.forEach(icon => {
+                if (icon.dataset.method === targetMethod) {
+                    icon.classList.add('active');
+                } else {
+                    icon.classList.remove('active');
+                }
+            });
+            methodLabel.textContent = `Optimizing for ${targetMethod}...`;
+            showToast(`Switched to ${targetMethod} mode`);
+            syncActiveGuideMethod();
+        }
+    });
+});
+
+// ESC key listener to dismiss modals
+window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+        if (helpGuideModal && !helpGuideModal.classList.contains('hidden')) closeHelpGuide();
+        if (logoQrModal && !logoQrModal.classList.contains('hidden')) logoQrModal.classList.add('hidden');
+        if (scanModal && !scanModal.classList.contains('hidden')) stopScanner();
+    }
+});
+
+// --- Theme Toggle Logic ---
+const themeToggleBtn = document.getElementById('themeToggleBtn');
+
+function getStoredTheme() {
+    const saved = localStorage.getItem('sharewith-theme');
+    if (saved === 'light' || saved === 'dark') return saved;
+    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) {
+        return 'light';
+    }
+    return 'dark';
+}
+
+function updateThemeUI(theme) {
+    document.documentElement.setAttribute('data-theme', theme);
+    if (!themeToggleBtn) return;
+    
+    const isDark = theme === 'dark';
+    themeToggleBtn.innerHTML = `<i data-lucide="${isDark ? 'sun' : 'moon'}"></i>`;
+    const label = isDark ? 'Switch to light mode' : 'Switch to dark mode';
+    themeToggleBtn.setAttribute('title', label);
+    themeToggleBtn.setAttribute('aria-label', label);
+    lucide.createIcons();
+}
+
+function setTheme(theme, showNotification = false) {
+    localStorage.setItem('sharewith-theme', theme);
+    updateThemeUI(theme);
+    if (showNotification) {
+        showToast(`Theme switched to ${theme.charAt(0).toUpperCase() + theme.slice(1)} mode`);
+    }
+}
+
+// Initialize theme UI
+updateThemeUI(getStoredTheme());
+
+if (themeToggleBtn) {
+    themeToggleBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
+        const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+        setTheme(newTheme, true);
+    });
+}
+
+// Listen to system theme preference changes if user hasn't explicitly set one
+if (window.matchMedia) {
+    window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', (e) => {
+        if (!localStorage.getItem('sharewith-theme')) {
+            updateThemeUI(e.matches ? 'light' : 'dark');
+        }
+    });
+}
+
 // Initial Start
 initPeer();
+
 

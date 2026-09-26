@@ -19,6 +19,13 @@
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
     <link rel="stylesheet" href="style.css">
+    <script>
+        (function() {
+            const saved = localStorage.getItem('sharewith-theme');
+            const theme = saved || (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+            document.documentElement.setAttribute('data-theme', theme);
+        })();
+    </script>
 </head>
 
 <body>
@@ -36,6 +43,12 @@
             <div class="connection-status" id="connectionStatus">
                 <span class="status-dot offline"></span>
                 <span class="status-text">Connecting to server...</span>
+                <button type="button" class="help-info-btn" id="syncHelpBtn" title="Help: How to connect & share documents" aria-label="Connection Guide">
+                    <i data-lucide="info"></i>
+                </button>
+                <button type="button" class="theme-toggle-btn" id="themeToggleBtn" title="Toggle Light/Dark Theme" aria-label="Toggle Theme">
+                    <i data-lucide="sun" id="themeToggleIcon"></i>
+                </button>
             </div>
         </nav>
 
@@ -76,7 +89,7 @@
 
                         <div id="urlDisplay" class="url-display hidden">
                             <span class="url-label">App Location:</span>
-                            <code id="siteLocationCode">https://ewckanpurtender-wq.github.io/Sharewith/</code>
+                            <code id="siteLocationCode">https://rkd-630.github.io/sharewith/</code>
                         </div>
 
                         <div class="qr-container" id="qrcode"></div>
@@ -189,7 +202,6 @@
             </div>
             <p class="footer-note">Securely encrypted & strictly peer-to-peer</p>
         </footer>
-    </div>
     </div><!-- Close App-Container -->
 
     <!-- Modal: Logo QR -->
@@ -217,6 +229,146 @@
                 <div class="scan-frame"></div>
             </div>
             <p class="modal-desc">Point your camera at the other device's QR code</p>
+        </div>
+    </div>
+
+    <!-- Modal: Help & Connection Guide -->
+    <div id="helpGuideModal" class="modal hidden">
+        <div class="modal-content help-modal-content">
+            <div class="help-modal-header">
+                <div class="help-header-title">
+                    <div class="help-icon-badge">
+                        <i data-lucide="help-circle"></i>
+                    </div>
+                    <div>
+                        <h2>How to Connect & Share</h2>
+                        <p class="modal-desc" style="margin-bottom: 0;">Online & Offline Document Sharing Guide</p>
+                    </div>
+                </div>
+                <button class="close-btn" id="closeHelpGuideBtn" aria-label="Close Help">&times;</button>
+            </div>
+
+            <div class="help-modal-body">
+                <div class="help-intro-box">
+                    <p><strong>Share With</strong> lets you send documents, photos, and files of any size directly peer-to-peer with end-to-end encryption. Select an optimization mode below to connect either online or completely offline:</p>
+                </div>
+
+                <div class="help-options-grid">
+                    <!-- Option 1 -->
+                    <div class="help-option-card" data-guide-method="Smart Connect">
+                        <div class="help-option-top">
+                            <div class="option-icon-box smart">
+                                <i data-lucide="zap"></i>
+                            </div>
+                            <div class="option-title-group">
+                                <span class="option-number">Option 1</span>
+                                <h3>Smart Connect</h3>
+                            </div>
+                            <span class="badge badge-auto">Online & Offline</span>
+                        </div>
+                        <p class="option-desc">
+                            Intelligent auto-routing. Detects whether devices are on the same local network or across the internet, automatically selecting the lowest-latency direct P2P data channel with zero configuration.
+                        </p>
+                        <div class="option-instruction">
+                            <strong>How to connect:</strong> Share your 6-digit Connection ID or scan the QR code. The app automatically chooses the best direct route.
+                        </div>
+                        <button type="button" class="option-select-btn" data-method-target="Smart Connect">
+                            <i data-lucide="check"></i> <span>Activate Smart Connect</span>
+                        </button>
+                    </div>
+
+                    <!-- Option 2 -->
+                    <div class="help-option-card" data-guide-method="Local Wi-Fi">
+                        <div class="help-option-top">
+                            <div class="option-icon-box wifi">
+                                <i data-lucide="wifi"></i>
+                            </div>
+                            <div class="option-title-group">
+                                <span class="option-number">Option 2</span>
+                                <h3>Local Wi-Fi / Hotspot</h3>
+                            </div>
+                            <span class="badge badge-offline">Offline LAN</span>
+                        </div>
+                        <p class="option-desc">
+                            Connects devices on the same Wi-Fi network or portable Mobile Hotspot. Transfers documents directly over the local network at maximum hardware speed (50–100+ MB/s).
+                        </p>
+                        <div class="option-instruction">
+                            <strong>How to connect offline:</strong> Turn on Mobile Hotspot on Device A, connect Device B to it, and open the app. No internet data quota is consumed!
+                        </div>
+                        <button type="button" class="option-select-btn" data-method-target="Local Wi-Fi">
+                            <i data-lucide="check"></i> <span>Activate Local Wi-Fi</span>
+                        </button>
+                    </div>
+
+                    <!-- Option 3 -->
+                    <div class="help-option-card" data-guide-method="Bluetooth">
+                        <div class="help-option-top">
+                            <div class="option-icon-box bluetooth">
+                                <i data-lucide="bluetooth"></i>
+                            </div>
+                            <div class="option-title-group">
+                                <span class="option-number">Option 3</span>
+                                <h3>Bluetooth Mode</h3>
+                            </div>
+                            <span class="badge badge-offline">100% Offline</span>
+                        </div>
+                        <p class="option-desc">
+                            Short-range proximity direct connection. Designed for quick off-grid transfers when no Wi-Fi router, cables, or cellular networks are available.
+                        </p>
+                        <div class="option-instruction">
+                            <strong>How to connect offline:</strong> Keep both devices within 10 meters, scan the receiver's QR code or pair peer IDs for quick off-grid handshakes.
+                        </div>
+                        <button type="button" class="option-select-btn" data-method-target="Bluetooth">
+                            <i data-lucide="check"></i> <span>Activate Bluetooth</span>
+                        </button>
+                    </div>
+
+                    <!-- Option 4 / Global Link -->
+                    <div class="help-option-card" data-guide-method="Global Link">
+                        <div class="help-option-top">
+                            <div class="option-icon-box global">
+                                <i data-lucide="globe"></i>
+                            </div>
+                            <div class="option-title-group">
+                                <span class="option-number">Option 4</span>
+                                <h3>Global Link (Worldwide)</h3>
+                            </div>
+                            <span class="badge badge-online">Worldwide Online</span>
+                        </div>
+                        <p class="option-desc">
+                            Connect across different cities, ISPs, or 4G/5G mobile carriers worldwide. WebRTC STUN/TURN traversal securely tunnels through firewalls and NATs.
+                        </p>
+                        <div class="option-instruction">
+                            <strong>How to connect online:</strong> Send your share link or 6-digit ID via chat or email. The recipient connects instantly from anywhere on Earth.
+                        </div>
+                        <button type="button" class="option-select-btn" data-method-target="Global Link">
+                            <i data-lucide="check"></i> <span>Activate Global Link</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="help-quick-steps">
+                    <h4><i data-lucide="sparkles"></i> 3-Step Quick Start</h4>
+                    <div class="steps-row">
+                        <div class="step-item">
+                            <div class="step-num">1</div>
+                            <div class="step-text"><strong>Choose Files:</strong> Drop documents or browse on the Send tab.</div>
+                        </div>
+                        <div class="step-item">
+                            <div class="step-num">2</div>
+                            <div class="step-text"><strong>Connect:</strong> Enter receiver's ID or scan QR code.</div>
+                        </div>
+                        <div class="step-item">
+                            <div class="step-num">3</div>
+                            <div class="step-text"><strong>Transfer:</strong> Receiver clicks Accept. Done in seconds!</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-actions" style="margin-top: 1.5rem; justify-content: flex-end;">
+                <button id="closeHelpGuideBtn2" class="primary-btn">Got It</button>
+            </div>
         </div>
     </div>
 
