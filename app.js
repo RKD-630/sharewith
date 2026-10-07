@@ -124,11 +124,18 @@ function enableOfflineSharingMode() {
 
 function broadcastLan(data) {
     if (lanChannel) {
-        lanChannel.postMessage(data);
+        try {
+            lanChannel.postMessage(data);
+        } catch (err) {
+            console.warn("BroadcastChannel postMessage error:", err);
+        }
     }
-    try {
-        localStorage.setItem('sharewith_lan_msg', JSON.stringify({ ...data, _ts: Date.now() }));
-    } catch (err) {}
+    // Only save metadata to localStorage if there is no large raw ArrayBuffer
+    if (!data.buffer) {
+        try {
+            localStorage.setItem('sharewith_lan_msg', JSON.stringify({ ...data, _ts: Date.now() }));
+        } catch (err) {}
+    }
 }
 
 function handleLanMessage(data) {
@@ -787,20 +794,13 @@ async function sendFileDataBatchLan(targetId) {
             const chunk = file.slice(offset, offset + CHUNK_SIZE);
             const arrayBuffer = await chunk.arrayBuffer();
 
-            const bytes = new Uint8Array(arrayBuffer);
-            let binary = '';
-            for (let b = 0; b < bytes.byteLength; b++) {
-                binary += String.fromCharCode(bytes[b]);
-            }
-            const base64 = btoa(binary);
-
             broadcastLan({
                 type: 'lan-file-chunk',
                 targetId: targetId,
                 senderId: myPeerId,
                 fileId: fileId,
                 chunkIndex: chunkIndex,
-                base64: base64
+                buffer: arrayBuffer
             });
 
             offset += chunk.size;
