@@ -23,6 +23,9 @@ const fileNameText = document.getElementById('fileNameText');
 const fileSizeText = document.getElementById('fileSizeText');
 const progressBarFill = document.getElementById('progressBarFill');
 const progressPercent = document.getElementById('progressPercent');
+const quickDownloadBadge = document.getElementById('quickDownloadBadge');
+const downloadStatusText = document.getElementById('downloadStatusText');
+const radarText = document.getElementById('radarText');
 
 const incomingModal = document.getElementById('incomingModal');
 const incomingFileInfo = document.getElementById('incomingFileInfo');
@@ -47,62 +50,212 @@ const transferInfo = document.getElementById('transferInfo');
 const methodIcons = document.querySelectorAll('.method-icon');
 const methodLabel = document.getElementById('methodLabel');
 
-// --- PeerJS / P2P Logic ---
+// --- PeerJS & Offline State Variables ---
 let peer = null;
 let currentConn = null;
-let currentFiles = []; // Array to store multiple files
+let currentFiles = []; // Array of files to send
 let currentFileIndex = 0;
-let receivedBlobs = []; // Array to store multiple received files
-let incomingFiles = []; // Array to store incoming file metadata
+let receivedBlobs = []; // Array of received files
+let incomingFiles = []; // Incoming metadata
+let currentReceivingFile = null; // Currently streaming file object
+let isQrScanConnection = false; // Flag for QR scan quick download
+let isOfflineSharingActive = false; // Offline mode flag
+let lanChannel = null; // BroadcastChannel for LAN sync
 let currentQrType = 'id';
 let myPeerId = '';
 let scanning = false;
+const CHUNK_SIZE = 64 * 1024; // 64 KB chunk size for WebRTC streaming
+
 let canvasElement = document.createElement("canvas");
 let canvas = canvasElement.getContext("2d", { willReadFrequently: true });
 
-// Initialize Peer
-function initPeer() {
-    // Generate a shorter, readable ID (optional, PeerJS generates longer ones by default)
-    const customId = Math.random().toString(36).substr(2, 6).toUpperCase();
-    
-    peer = new Peer(customId, {
-        debug: 3
+// --- Offline Local Sharing Fallback System ---
+function initOfflineSharing() {
+    if ('BroadcastChannel' in window) {
+        lanChannel = new BroadcastChannel('sharewith_lan_channel');
+        lanChannel.onmessage = (e) => {
+            handleLanMessage(e.data);
+        };
+    }
+
+    // Storage event fallback for same-origin tabs/windows
+    window.addEventListener('storage', (e) => {
+        if (e.key === 'sharewith_lan_msg' && e.newValue) {
+            try {
+                const data = JSON.parse(e.newValue);
+                handleLanMessage(data);
+            } catch (err) {}
+        }
     });
 
-    peer.on('open', (id) => {
-        myPeerId = id;
-        myIdEl.textContent = id;
+    // Detect browser offline/online status automatically
+    window.addEventListener('offline', () => {
+        showToast("Internet disconnected. Switching to Offline Local Sharing mode...", "warning");
+        enableOfflineSharingMode();
+    });
+
+    window.addEventListener('online', () => {
+        showToast("Internet reconnected. Ready for Global & Local sharing.", "info");
         statusDot.className = 'status-dot online';
         statusText.textContent = 'Ready to sync';
-        updateQR();
+        isOfflineSharingActive = false;
     });
 
-    peer.on('error', (err) => {
-        console.error('Peer error:', err);
-        if (err.type === 'peer-unavailable') {
-            showToast("Device not found. Please verify the Connection ID or QR code.", "error");
-            if (transferZone) transferZone.classList.add('hidden');
-            if (radarContainer) radarContainer.classList.add('hidden');
-            return;
+    if (!navigator.onLine) {
+        enableOfflineSharingMode();
+    }
+}
+
+function enableOfflineSharingMode() {
+    isOfflineSharingActive = true;
+    statusDot.className = 'status-dot offline-lan';
+    statusText.textContent = 'Offline LAN Mode (Wi-Fi / Hotspot)';
+    
+    // Auto highlight Local Wi-Fi icon
+    methodIcons.forEach(icon => {
+        if (icon.dataset.method === 'Local Wi-Fi') {
+            icon.classList.add('active');
+        } else {
+            icon.classList.remove('active');
         }
-        if (err.type === 'unavailable-id') {
-            setTimeout(initPeer, 500);
-            return;
-        }
-        statusDot.className = 'status-dot offline';
-        statusText.textContent = 'Offline (Retry in 5s)';
-        setTimeout(() => {
-            if (peer && !peer.destroyed) {
-                try { peer.destroy(); } catch (e) {}
+    });
+    if (methodLabel) methodLabel.textContent = 'Active Mode: Local Wi-Fi / Hotspot (Offline Sharing)';
+}
+
+function broadcastLan(data) {
+    if (lanChannel) {
+        lanChannel.postMessage(data);
+    }
+    try {
+        localStorage.setItem('sharewith_lan_msg', JSON.stringify({ ...data, _ts: Date.now() }));
+    } catch (err) {}
+}
+
+function handleLanMessage(data) {
+    if (!data || !data.targetId) return;
+    
+    if (myPeerId && data.targetId.toUpperCase() === myPeerId.toUpperCase()) {
+        if (data.type === 'lan-connect') {
+            showToast("Offline connection request received!", "info");
+            if (currentFiles.length > 0) {
+                sendFileDataBatchLan(data.senderId);
             }
-            initPeer();
-        }, 5000);
-    });
+        } else if (data.type === 'lan-metadata-batch') {
+            incomingFiles = data.files;
+            acceptIncomingFilesQuickly();
+        } else if (data.type === 'lan-file-start') {
+            currentReceivingFile = {
+                fileId: data.fileId,
+                name: data.name,
+                size: data.size,
+                mimeType: data.mimeType || 'application/octet-stream',
+                fileIndex: data.fileIndex,
+                totalFiles: data.totalFiles,
+                chunks: [],
+                receivedBytes: 0,
+                startTime: Date.now()
+            };
+            transferZone.classList.remove('hidden');
+            radarContainer.classList.add('hidden');
+            transferInfo.classList.remove('hidden');
+            if (quickDownloadBadge) quickDownloadBadge.classList.remove('hidden');
 
-    // Handle Incoming Connection
-    peer.on('connection', (conn) => {
-        handleConnection(conn);
-    });
+            transferTitle.textContent = data.totalFiles > 1 
+                ? `Offline Downloading (${data.fileIndex + 1}/${data.totalFiles})...`
+                : `Offline Downloading File...`;
+
+            fileNameText.textContent = data.name;
+            fileSizeText.textContent = `0 B / ${formatBytes(data.size)}`;
+            if (downloadStatusText) downloadStatusText.textContent = 'Downloading via Local Wi-Fi...';
+            updateProgress(0);
+        } else if (data.type === 'lan-file-chunk') {
+            if (currentReceivingFile && currentReceivingFile.fileId === data.fileId) {
+                let chunkBuffer;
+                if (data.buffer instanceof ArrayBuffer) {
+                    chunkBuffer = data.buffer;
+                } else if (data.base64) {
+                    const binary = atob(data.base64);
+                    const bytes = new Uint8Array(binary.length);
+                    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+                    chunkBuffer = bytes.buffer;
+                }
+                if (chunkBuffer) {
+                    currentReceivingFile.chunks.push(chunkBuffer);
+                    currentReceivingFile.receivedBytes += chunkBuffer.byteLength;
+                    const percent = Math.min(100, Math.round((currentReceivingFile.receivedBytes / currentReceivingFile.size) * 100));
+                    updateProgress(percent);
+                    fileSizeText.textContent = `${formatBytes(currentReceivingFile.receivedBytes)} / ${formatBytes(currentReceivingFile.size)}`;
+
+                    const elapsedSec = (Date.now() - currentReceivingFile.startTime) / 1000;
+                    if (elapsedSec > 0.2 && downloadStatusText) {
+                        const speed = currentReceivingFile.receivedBytes / elapsedSec;
+                        downloadStatusText.textContent = `${formatBytes(speed)}/s • Offline LAN`;
+                    }
+                }
+            }
+        } else if (data.type === 'lan-file-end') {
+            if (currentReceivingFile && currentReceivingFile.fileId === data.fileId) {
+                const blob = new Blob(currentReceivingFile.chunks, { type: currentReceivingFile.mimeType });
+                const fileName = currentReceivingFile.name;
+                triggerFileDownload(blob, fileName);
+                receivedBlobs.push({ name: fileName, blob: blob });
+                updateProgress(100);
+                showToast(`Offline Downloaded: ${fileName}`, "success");
+                if (currentReceivingFile.fileIndex === currentReceivingFile.totalFiles - 1) {
+                    setTimeout(() => {
+                        showSuccess(`${currentReceivingFile.totalFiles} file(s) downloaded offline successfully!`, true);
+                        transferZone.classList.add('hidden');
+                    }, 800);
+                }
+            }
+        }
+    }
+}
+
+// Initialize Peer
+function initPeer() {
+    const customId = Math.random().toString(36).substr(2, 6).toUpperCase();
+    myPeerId = customId;
+    myIdEl.textContent = customId;
+    updateQR();
+    
+    initOfflineSharing();
+
+    try {
+        peer = new Peer(customId, {
+            debug: 3
+        });
+
+        peer.on('open', (id) => {
+            myPeerId = id;
+            myIdEl.textContent = id;
+            statusDot.className = 'status-dot online';
+            statusText.textContent = 'Ready to sync';
+            updateQR();
+        });
+
+        peer.on('error', (err) => {
+            console.error('Peer error:', err);
+            if (err.type === 'peer-unavailable') {
+                showToast("Cloud connection unavailable. Attempting Offline Local Sharing...", "warning");
+                return;
+            }
+            if (err.type === 'unavailable-id') {
+                setTimeout(initPeer, 500);
+                return;
+            }
+            // Auto fallback on server connection error
+            enableOfflineSharingMode();
+            showToast("Online server unreachable. Automatically switched to Offline Local Sharing mode!", "warning");
+        });
+
+        peer.on('connection', (conn) => {
+            handleConnection(conn);
+        });
+    } catch (e) {
+        console.warn("PeerJS failed to initialize, switching to offline mode:", e);
+        enableOfflineSharingMode();
+    }
 }
 
 function handleConnection(conn) {
@@ -110,52 +263,114 @@ function handleConnection(conn) {
     
     conn.on('open', () => {
         console.log("Connection established with:", conn.peer);
-        // If we have files ready to send, initiate the metadata exchange
         if (currentFiles.length > 0) {
             conn.send({
                 type: 'metadata-batch',
-                files: currentFiles.map(f => ({ name: f.name, size: f.size }))
+                files: currentFiles.map(f => ({ name: f.name, size: f.size, type: f.type })),
+                isQrScan: isQrScanConnection
             });
-            showToast(`Connected! Requesting to send ${currentFiles.length} file(s)...`);
+            showToast(`Connected! Sending request for ${currentFiles.length} file(s)...`);
         }
     });
 
     conn.on('data', (data) => {
         if (data.type === 'metadata-batch') {
-            // Sender sent batch metadata, ask for acceptance
             incomingFiles = data.files;
             const totalSize = incomingFiles.reduce((acc, f) => acc + f.size, 0);
             const names = incomingFiles.map(f => f.name).join(', ');
-            
-            incomingFileInfo.textContent = `${incomingFiles.length} Files: ${names.length > 40 ? names.substring(0, 37) + '...' : names} (${formatBytes(totalSize)})`;
-            incomingModal.classList.remove('hidden');
-        } else if (data.type === 'file-part') {
-            // Sender sent a single file in the batch
-            const blob = new Blob([data.buffer]);
-            const url = URL.createObjectURL(blob);
-            
-            // Auto download
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = data.name;
-            a.click();
-            
-            receivedBlobs.push({ name: data.name, blob: blob });
-            
-            const progress = Math.round(((data.index + 1) / incomingFiles.length) * 100);
-            updateProgress(progress);
-            
-            if (data.index === incomingFiles.length - 1) {
-                showSuccess(`${incomingFiles.length} file(s) received successfully.`, true);
-                transferZone.classList.add('hidden');
+
+            if (isQrScanConnection || data.isQrScan) {
+                showToast("QR Code Scanned! Quick Download starting...", "info");
+                acceptIncomingFilesQuickly();
             } else {
-                transferTitle.textContent = `Receiving (${data.index + 2}/${incomingFiles.length})...`;
+                incomingFileInfo.textContent = `${incomingFiles.length} File(s): ${names.length > 40 ? names.substring(0, 37) + '...' : names} (${formatBytes(totalSize)})`;
+                incomingModal.classList.remove('hidden');
             }
+
         } else if (data.type === 'accept') {
-            // Receiver accepted, send all files
             sendFileDataBatch();
+
         } else if (data.type === 'decline') {
             showToast("Transfer declined by receiver.", "error");
+            transferZone.classList.add('hidden');
+
+        } else if (data.type === 'file-start') {
+            currentReceivingFile = {
+                fileId: data.fileId,
+                name: data.name,
+                size: data.size,
+                mimeType: data.mimeType || 'application/octet-stream',
+                fileIndex: data.fileIndex,
+                totalFiles: data.totalFiles,
+                totalChunks: data.totalChunks,
+                chunks: [],
+                receivedBytes: 0,
+                startTime: Date.now()
+            };
+
+            transferZone.classList.remove('hidden');
+            radarContainer.classList.add('hidden');
+            transferInfo.classList.remove('hidden');
+
+            if (quickDownloadBadge) {
+                if (isQrScanConnection || data.isQrScan) {
+                    quickDownloadBadge.classList.remove('hidden');
+                } else {
+                    quickDownloadBadge.classList.add('hidden');
+                }
+            }
+
+            transferTitle.textContent = data.totalFiles > 1 
+                ? `Quick Downloading (${data.fileIndex + 1}/${data.totalFiles})...`
+                : `Quick Downloading File...`;
+
+            fileNameText.textContent = data.name;
+            fileSizeText.textContent = `0 B / ${formatBytes(data.size)}`;
+            if (downloadStatusText) downloadStatusText.textContent = 'Starting download...';
+            updateProgress(0);
+
+        } else if (data.type === 'file-chunk') {
+            if (currentReceivingFile && currentReceivingFile.fileId === data.fileId) {
+                currentReceivingFile.chunks.push(data.buffer);
+                currentReceivingFile.receivedBytes += data.buffer.byteLength;
+
+                const percent = Math.min(100, Math.round((currentReceivingFile.receivedBytes / currentReceivingFile.size) * 100));
+                updateProgress(percent);
+                fileSizeText.textContent = `${formatBytes(currentReceivingFile.receivedBytes)} / ${formatBytes(currentReceivingFile.size)}`;
+
+                const elapsedSec = (Date.now() - currentReceivingFile.startTime) / 1000;
+                if (elapsedSec > 0.2) {
+                    const speed = currentReceivingFile.receivedBytes / elapsedSec;
+                    if (downloadStatusText) downloadStatusText.textContent = `${formatBytes(speed)}/s • Downloading`;
+                }
+            }
+
+        } else if (data.type === 'file-end') {
+            if (currentReceivingFile && currentReceivingFile.fileId === data.fileId) {
+                const blob = new Blob(currentReceivingFile.chunks, { type: currentReceivingFile.mimeType });
+                const fileName = currentReceivingFile.name;
+
+                triggerFileDownload(blob, fileName);
+                receivedBlobs.push({ name: fileName, blob: blob });
+                updateProgress(100);
+
+                showToast(`Downloaded: ${fileName}`, "success");
+                if (downloadStatusText) downloadStatusText.textContent = 'Download Complete!';
+
+                if (currentReceivingFile.fileIndex === currentReceivingFile.totalFiles - 1) {
+                    setTimeout(() => {
+                        showSuccess(`${currentReceivingFile.totalFiles} file(s) downloaded successfully!`, true);
+                        transferZone.classList.add('hidden');
+                    }, 800);
+                }
+            }
+
+        } else if (data.type === 'file-part') {
+            const blob = new Blob([data.buffer]);
+            triggerFileDownload(blob, data.name);
+            receivedBlobs.push({ name: data.name, blob: blob });
+            updateProgress(100);
+            showSuccess(`Downloaded ${data.name}`, true);
             transferZone.classList.add('hidden');
         }
     });
@@ -164,6 +379,38 @@ function handleConnection(conn) {
         showToast("Connection lost.", "error");
         console.log("Connection closed");
     });
+}
+
+function acceptIncomingFilesQuickly() {
+    incomingModal.classList.add('hidden');
+    transferZone.classList.remove('hidden');
+    radarContainer.classList.add('hidden');
+    transferInfo.classList.remove('hidden');
+    if (quickDownloadBadge) quickDownloadBadge.classList.remove('hidden');
+
+    if (incomingFiles && incomingFiles.length > 0) {
+        fileNameText.textContent = incomingFiles[0].name;
+        fileSizeText.textContent = `0 B / ${formatBytes(incomingFiles[0].size)}`;
+    }
+    transferTitle.textContent = "Quick Downloading File...";
+    if (downloadStatusText) downloadStatusText.textContent = "Connecting stream...";
+    updateProgress(0);
+
+    receivedBlobs = [];
+    if (currentConn) {
+        currentConn.send({ type: 'accept' });
+    }
+}
+
+function triggerFileDownload(blob, fileName) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
 }
 
 // --- Toast System ---
@@ -220,28 +467,33 @@ function tick() {
 
         if (code) {
             console.log("Found QR code", code.data);
-            showToast("ID Found! Connecting...");
-            targetIdInput.value = code.data;
+            showToast("QR Code Scanned! Connecting for Quick Download...");
+            
+            let extractedId = code.data;
+            if (extractedId.includes('#')) {
+                extractedId = extractedId.split('#').pop();
+            }
+            targetIdInput.value = extractedId;
+            isQrScanConnection = true;
             stopScanner();
             
-            // Smarter redirection/action based on state
             if (currentFiles.length > 0) {
-                initiateSend(code.data);
+                initiateSend(extractedId);
             } else {
-                // If no file, assume we are receiving
-                initiateReceive(code.data);
+                initiateReceive(extractedId);
             }
         }
     }
     requestAnimationFrame(tick);
 }
 
-scanQrBtn.addEventListener('click', startScanner);
+scanQrBtn.addEventListener('click', () => {
+    isQrScanConnection = true;
+    startScanner();
+});
 closeScanBtn.addEventListener('click', stopScanner);
 
 // --- Interaction Logic ---
-
-// Tab Switching
 tabBtns.forEach(btn => {
     btn.addEventListener('click', () => {
         tabBtns.forEach(b => b.classList.remove('active'));
@@ -252,7 +504,6 @@ tabBtns.forEach(btn => {
     });
 });
 
-// File Selection
 dropZone.addEventListener('click', () => fileInput.click());
 
 fileInput.addEventListener('change', (e) => {
@@ -283,7 +534,6 @@ function prepareToSendBatch(files) {
     fileNameText.textContent = files.length > 1 ? `${files.length} Files Selected` : files[0].name;
     fileSizeText.textContent = formatBytes(totalSize);
     
-    // Switch UI to show files are selected
     const dropZoneIcon = dropZone.querySelector('.drop-icon');
     const dropZoneText = dropZone.querySelector('p');
     
@@ -304,99 +554,288 @@ function prepareToSendBatch(files) {
 }
 
 function initiateSend(targetId) {
-    if (!peer) return;
+    if (!peer || !navigator.onLine) {
+        fallbackToOfflineSend(targetId);
+        return;
+    }
     
     transferZone.classList.remove('hidden');
-    radarContainer.classList.remove('hidden'); // Show radar first
+    radarContainer.classList.remove('hidden');
+    if (radarText) radarText.textContent = "Connecting to receiver...";
     transferInfo.classList.add('hidden');
     progressBarFill.style.width = '0%';
     progressPercent.textContent = '0%';
 
-    // Simulate "Finding device" through the chosen method
-    setTimeout(() => {
+    let connected = false;
+
+    try {
         const conn = peer.connect(targetId);
         handleConnection(conn);
 
         conn.on('open', () => {
+            connected = true;
             radarContainer.classList.add('hidden');
             transferInfo.classList.remove('hidden');
             transferTitle.textContent = "Requesting Access...";
-            // Metadata-batch is already sent via handleConnection's 'open' listener
         });
         
-        conn.on('error', () => {
-            showToast("Device Discovery Failed", "error");
-            transferZone.classList.add('hidden');
+        conn.on('error', (err) => {
+            console.warn("Online send connection error, switching to Offline LAN...", err);
+            fallbackToOfflineSend(targetId);
         });
-    }, 2000); // 2s of radar scanning
+    } catch (e) {
+        fallbackToOfflineSend(targetId);
+        return;
+    }
+
+    // Auto fallback if online PeerJS connection fails to open within 3 seconds
+    setTimeout(() => {
+        if (!connected) {
+            console.warn("Peer connection timed out. Falling back to Offline Local Sharing mode...");
+            fallbackToOfflineSend(targetId);
+        }
+    }, 3000);
+}
+
+function fallbackToOfflineSend(targetId) {
+    enableOfflineSharingMode();
+    showToast("Online server unreachable. Switched automatically to Offline Local Sharing mode!", "warning");
+    
+    broadcastLan({
+        type: 'lan-metadata-batch',
+        targetId: targetId,
+        senderId: myPeerId,
+        files: currentFiles.map(f => ({ name: f.name, size: f.size, type: f.type }))
+    });
+    
+    sendFileDataBatchLan(targetId);
 }
 
 function initiateReceive(targetId) {
-    if (!peer) return;
+    if (!peer || !navigator.onLine) {
+        fallbackToOfflineReceive(targetId);
+        return;
+    }
 
     transferZone.classList.remove('hidden');
     radarContainer.classList.remove('hidden');
+    if (radarText) radarText.textContent = isQrScanConnection ? "Connecting via QR Quick Link..." : "Scanning Network...";
     transferInfo.classList.add('hidden');
     progressBarFill.style.width = '0%';
     progressPercent.textContent = '0%';
 
-    setTimeout(() => {
+    let connected = false;
+
+    try {
         const conn = peer.connect(targetId);
         handleConnection(conn);
 
         conn.on('open', () => {
+            connected = true;
             radarContainer.classList.add('hidden');
             transferInfo.classList.remove('hidden');
             transferTitle.textContent = "Connecting to Host...";
-            // We are the receiver, we just wait for metadata.
-            // handleConnection will trigger the incoming modal when metadata arrives.
         });
 
         conn.on('error', () => {
-            showToast("Connection to Host Failed", "error");
-            transferZone.classList.add('hidden');
+            console.warn("Online receive connection error, switching to Offline LAN...");
+            fallbackToOfflineReceive(targetId);
         });
-    }, 1500);
+    } catch (e) {
+        fallbackToOfflineReceive(targetId);
+        return;
+    }
+
+    setTimeout(() => {
+        if (!connected) {
+            console.warn("Receive connection timed out. Falling back to Offline Local Sharing mode...");
+            fallbackToOfflineReceive(targetId);
+        }
+    }, 3000);
+}
+
+function fallbackToOfflineReceive(targetId) {
+    enableOfflineSharingMode();
+    showToast("Online server unreachable. Switched automatically to Offline Local Sharing mode!", "warning");
+    
+    broadcastLan({
+        type: 'lan-connect',
+        targetId: targetId,
+        senderId: myPeerId
+    });
+    
+    radarContainer.classList.add('hidden');
+    transferInfo.classList.remove('hidden');
+    transferTitle.textContent = "Waiting for Offline Transmission...";
+    if (downloadStatusText) downloadStatusText.textContent = "Listening on Local Wi-Fi / Hotspot...";
 }
 
 async function sendFileDataBatch() {
     transferZone.classList.remove('hidden');
     radarContainer.classList.add('hidden');
     transferInfo.classList.remove('hidden');
-    transferTitle.textContent = "Optimizing Route...";
-    
-    // Simulate some "Connecting" time for aesthetics
-    setTimeout(async () => {
-        for (let i = 0; i < currentFiles.length; i++) {
-            const file = currentFiles[i];
-            transferTitle.textContent = `Sending (${i + 1}/${currentFiles.length}): ${file.name}`;
-            
-            const reader = new FileReader();
-            await new Promise((resolve) => {
-                reader.onload = (event) => {
-                    currentConn.send({
-                        type: 'file-part',
-                        index: i,
-                        name: file.name,
-                        buffer: event.target.result
-                    });
-                    
-                    const progress = Math.round(((i + 1) / currentFiles.length) * 100);
-                    updateProgress(progress);
-                    resolve();
-                };
-                reader.readAsArrayBuffer(file);
+    transferTitle.textContent = "Preparing Transmission...";
+    if (quickDownloadBadge) quickDownloadBadge.classList.add('hidden');
+
+    for (let i = 0; i < currentFiles.length; i++) {
+        const file = currentFiles[i];
+        const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
+        const fileId = 'file_' + Math.random().toString(36).substr(2, 7);
+
+        fileNameText.textContent = file.name;
+        transferTitle.textContent = `Sending (${i + 1}/${currentFiles.length}): ${file.name}`;
+        if (downloadStatusText) downloadStatusText.textContent = 'Sending file...';
+
+        currentConn.send({
+            type: 'file-start',
+            fileId: fileId,
+            name: file.name,
+            size: file.size,
+            mimeType: file.type || 'application/octet-stream',
+            fileIndex: i,
+            totalFiles: currentFiles.length,
+            totalChunks: totalChunks
+        });
+
+        let offset = 0;
+        let chunkIndex = 0;
+        const startTime = Date.now();
+
+        while (offset < file.size) {
+            if (currentConn._dc && currentConn._dc.bufferedAmount > 256 * 1024) {
+                await new Promise(r => setTimeout(r, 40));
+                continue;
+            }
+
+            const chunk = file.slice(offset, offset + CHUNK_SIZE);
+            const arrayBuffer = await chunk.arrayBuffer();
+
+            currentConn.send({
+                type: 'file-chunk',
+                fileId: fileId,
+                chunkIndex: chunkIndex,
+                buffer: arrayBuffer
             });
-            
-            // Short delay between files to ensure orderly transmission
-            await new Promise(r => setTimeout(r, 500));
+
+            offset += chunk.size;
+            chunkIndex++;
+
+            const pct = Math.min(100, Math.round((offset / file.size) * 100));
+            updateProgress(pct);
+            fileSizeText.textContent = `${formatBytes(Math.min(offset, file.size))} / ${formatBytes(file.size)}`;
+
+            const elapsedSec = (Date.now() - startTime) / 1000;
+            if (elapsedSec > 0.2 && downloadStatusText) {
+                const speed = offset / elapsedSec;
+                downloadStatusText.textContent = `${formatBytes(speed)}/s • Sending`;
+            }
+
+            if (chunkIndex % 4 === 0) {
+                await new Promise(r => setTimeout(r, 5));
+            }
         }
-        
-        setTimeout(() => {
-            showSuccess(`${currentFiles.length} Document(s) sent successfully!`);
-            transferZone.classList.add('hidden');
-        }, 1000);
-    }, 1500);
+
+        currentConn.send({
+            type: 'file-end',
+            fileId: fileId,
+            name: file.name
+        });
+
+        await new Promise(r => setTimeout(r, 200));
+    }
+
+    setTimeout(() => {
+        showSuccess(`${currentFiles.length} File(s) sent successfully!`);
+        transferZone.classList.add('hidden');
+    }, 800);
+}
+
+async function sendFileDataBatchLan(targetId) {
+    transferZone.classList.remove('hidden');
+    radarContainer.classList.add('hidden');
+    transferInfo.classList.remove('hidden');
+    transferTitle.textContent = "Offline Transmitting...";
+    if (quickDownloadBadge) quickDownloadBadge.classList.add('hidden');
+
+    for (let i = 0; i < currentFiles.length; i++) {
+        const file = currentFiles[i];
+        const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
+        const fileId = 'file_lan_' + Math.random().toString(36).substr(2, 7);
+
+        fileNameText.textContent = file.name;
+        transferTitle.textContent = `Offline Sending (${i + 1}/${currentFiles.length}): ${file.name}`;
+        if (downloadStatusText) downloadStatusText.textContent = 'Sending over Local Wi-Fi...';
+
+        broadcastLan({
+            type: 'lan-file-start',
+            targetId: targetId,
+            senderId: myPeerId,
+            fileId: fileId,
+            name: file.name,
+            size: file.size,
+            mimeType: file.type || 'application/octet-stream',
+            fileIndex: i,
+            totalFiles: currentFiles.length,
+            totalChunks: totalChunks
+        });
+
+        let offset = 0;
+        let chunkIndex = 0;
+        const startTime = Date.now();
+
+        while (offset < file.size) {
+            const chunk = file.slice(offset, offset + CHUNK_SIZE);
+            const arrayBuffer = await chunk.arrayBuffer();
+
+            const bytes = new Uint8Array(arrayBuffer);
+            let binary = '';
+            for (let b = 0; b < bytes.byteLength; b++) {
+                binary += String.fromCharCode(bytes[b]);
+            }
+            const base64 = btoa(binary);
+
+            broadcastLan({
+                type: 'lan-file-chunk',
+                targetId: targetId,
+                senderId: myPeerId,
+                fileId: fileId,
+                chunkIndex: chunkIndex,
+                base64: base64
+            });
+
+            offset += chunk.size;
+            chunkIndex++;
+
+            const pct = Math.min(100, Math.round((offset / file.size) * 100));
+            updateProgress(pct);
+            fileSizeText.textContent = `${formatBytes(Math.min(offset, file.size))} / ${formatBytes(file.size)}`;
+
+            const elapsedSec = (Date.now() - startTime) / 1000;
+            if (elapsedSec > 0.2 && downloadStatusText) {
+                const speed = offset / elapsedSec;
+                downloadStatusText.textContent = `${formatBytes(speed)}/s • Offline LAN`;
+            }
+
+            if (chunkIndex % 3 === 0) {
+                await new Promise(r => setTimeout(r, 10));
+            }
+        }
+
+        broadcastLan({
+            type: 'lan-file-end',
+            targetId: targetId,
+            senderId: myPeerId,
+            fileId: fileId,
+            name: file.name
+        });
+
+        await new Promise(r => setTimeout(r, 200));
+    }
+
+    setTimeout(() => {
+        showSuccess(`${currentFiles.length} File(s) sent via Offline Local Sharing!`);
+        transferZone.classList.add('hidden');
+    }, 800);
 }
 
 function updateProgress(val) {
@@ -406,18 +845,14 @@ function updateProgress(val) {
 
 // --- Receivers Actions ---
 acceptBtn.addEventListener('click', () => {
-    incomingModal.classList.add('hidden');
-    transferTitle.textContent = `Receiving (1/${incomingFiles.length})...`;
-    transferZone.classList.remove('hidden');
-    updateProgress(0);
-    
-    receivedBlobs = [];
-    currentConn.send({ type: 'accept' });
+    acceptIncomingFilesQuickly();
 });
 
 declineBtn.addEventListener('click', () => {
     incomingModal.classList.add('hidden');
-    currentConn.send({ type: 'decline' });
+    if (currentConn) {
+        currentConn.send({ type: 'decline' });
+    }
 });
 
 // --- UI Helpers ---
@@ -450,7 +885,6 @@ function updateQR() {
     document.getElementById('qrLabel').textContent = label;
 }
 
-// Generate QR helper (legacy wrapper)
 function generateQR(id) {
     myPeerId = id;
     updateQR();
@@ -460,15 +894,17 @@ function generateQR(id) {
 window.addEventListener('load', () => {
     const hash = window.location.hash;
     if (hash && hash.length > 1) {
-        const id = hash.substring(1);
-        if (id && id.length === 6) { // Basic length check for our 6-char IDs
+        const id = hash.substring(1).toUpperCase();
+        if (id && id.length === 6) {
             targetIdInput.value = id;
+            isQrScanConnection = true;
             tabBtns.forEach(b => b.classList.remove('active'));
             tabContents.forEach(c => c.classList.remove('active'));
             document.querySelector('[data-tab="receive"]').classList.add('active');
             document.getElementById('receiveTab').classList.add('active');
             
-            showToast("Auto-filled sender ID from link!");
+            showToast("Quick Download Link detected from QR Code!");
+            initiateReceive(id);
         }
     }
 });
@@ -509,18 +945,13 @@ function showSuccess(msg, showDownload = false) {
 
 downloadAgainBtn.addEventListener('click', () => {
     receivedBlobs.forEach(item => {
-        const url = URL.createObjectURL(item.blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = item.name;
-        a.click();
-        URL.revokeObjectURL(url);
+        triggerFileDownload(item.blob, item.name);
     });
 });
 
 closeSuccessBtn.addEventListener('click', () => {
     successModal.classList.add('hidden');
-    receivedBlobs = []; // Clear blobs after closing
+    receivedBlobs = [];
 });
 
 // Copy ID
@@ -578,7 +1009,6 @@ let logoQrInstance = null;
 logoBtn.addEventListener('click', () => {
     logoQrModal.classList.remove('hidden');
     
-    // Generate URL including Peer ID if available
     const baseUrl = window.location.origin + window.location.pathname;
     const text = baseUrl + (myPeerId ? '#' + myPeerId : '');
     
@@ -637,7 +1067,6 @@ if (helpGuideModal) {
     });
 }
 
-// Sync active method with guide cards
 function syncActiveGuideMethod() {
     const activeIcon = document.querySelector('.method-icon.active');
     const activeMethod = activeIcon ? activeIcon.dataset.method : 'Smart Connect';
@@ -655,7 +1084,6 @@ function syncActiveGuideMethod() {
     });
 }
 
-// Method selection from help guide
 document.querySelectorAll('.option-select-btn').forEach(btn => {
     btn.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -675,7 +1103,6 @@ document.querySelectorAll('.option-select-btn').forEach(btn => {
     });
 });
 
-// Allow clicking the card directly
 document.querySelectorAll('.help-option-card').forEach(card => {
     card.addEventListener('click', () => {
         const targetMethod = card.getAttribute('data-guide-method');
@@ -694,7 +1121,7 @@ document.querySelectorAll('.help-option-card').forEach(card => {
     });
 });
 
-// ESC key listener to dismiss modals
+// ESC key listener
 window.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
         if (helpGuideModal && !helpGuideModal.classList.contains('hidden')) closeHelpGuide();
@@ -735,7 +1162,6 @@ function setTheme(theme, showNotification = false) {
     }
 }
 
-// Initialize theme UI
 updateThemeUI(getStoredTheme());
 
 if (themeToggleBtn) {
@@ -747,7 +1173,6 @@ if (themeToggleBtn) {
     });
 }
 
-// Listen to system theme preference changes if user hasn't explicitly set one
 if (window.matchMedia) {
     window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', (e) => {
         if (!localStorage.getItem('sharewith-theme')) {
@@ -758,5 +1183,3 @@ if (window.matchMedia) {
 
 // Initial Start
 initPeer();
-
-
