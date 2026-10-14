@@ -22,7 +22,7 @@
     <script>
         (function() {
             const saved = localStorage.getItem('sharewith-theme');
-            const theme = saved || (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+            const theme = (saved === 'light' || saved === 'dark') ? saved : 'light';
             document.documentElement.setAttribute('data-theme', theme);
         })();
     </script>
@@ -43,18 +43,18 @@
             <div class="connection-status" id="connectionStatus">
                 <span class="status-dot offline"></span>
                 <span class="status-text">Connecting to server...</span>
-                <button type="button" class="turbo-btn active" id="turboModeBtn" title="Turbo Mode: Auto-accepts and streams at maximum WebRTC line speed">
-                    <i data-lucide="zap"></i>
-                    <span>Turbo: ON</span>
+                <button type="button" class="turbo-btn disabled" id="turboModeBtn" title="Turbo Mode: OFF (Click to enable auto-accept)">
+                    <i data-lucide="zap-off"></i>
+                    <span>Turbo: OFF</span>
                 </button>
-                <button type="button" class="notification-toggle-btn" id="notificationToggleBtn" title="Notifications: ON (Click to mute messages)" aria-label="Toggle Notifications">
-                    <i data-lucide="bell" id="notificationToggleIcon"></i>
+                <button type="button" class="notification-toggle-btn muted" id="notificationToggleBtn" title="Notifications: OFF (Click to unmute messages)" aria-label="Toggle Notifications">
+                    <i data-lucide="bell-off" id="notificationToggleIcon"></i>
                 </button>
                 <button type="button" class="help-info-btn" id="syncHelpBtn" title="Help: How to connect & share documents" aria-label="Connection Guide">
                     <i data-lucide="info"></i>
                 </button>
-                <button type="button" class="theme-toggle-btn" id="themeToggleBtn" title="Toggle Light/Dark Theme" aria-label="Toggle Theme">
-                    <i data-lucide="sun" id="themeToggleIcon"></i>
+                <button type="button" class="theme-toggle-btn" id="themeToggleBtn" title="Switch to dark mode" aria-label="Switch to dark mode">
+                    <i data-lucide="moon" id="themeToggleIcon"></i>
                 </button>
             </div>
         </nav>

@@ -67,8 +67,8 @@ let receivedBlobs = []; // Array of received files
 let incomingFiles = []; // Incoming metadata
 let currentReceivingFile = null; // Currently streaming file object
 let isQrScanConnection = false; // Flag for QR scan quick download
-let isTurboModeEnabled = true; // Turbo auto-accept & line-speed streaming
-let notificationsEnabled = localStorage.getItem('sharewith_notifications') !== 'false'; // Notification toggle state
+let isTurboModeEnabled = localStorage.getItem('sharewith_turbo') === 'true'; // Default: OFF
+let notificationsEnabled = localStorage.getItem('sharewith_notifications') === 'true'; // Default: OFF
 let isOfflineSharingActive = false; // Offline mode flag
 let lanChannel = null; // BroadcastChannel for LAN sync
 let currentQrType = 'id';
@@ -1195,19 +1195,31 @@ if (scanToSendBtn) {
 }
 
 // Turbo Mode Button
+function updateTurboUI(enabled) {
+    if (!turboModeBtn) return;
+    if (enabled) {
+        turboModeBtn.className = 'turbo-btn active';
+        turboModeBtn.innerHTML = '<i data-lucide="zap"></i><span>Turbo: ON</span>';
+        turboModeBtn.setAttribute('title', 'Turbo Mode: ON (Auto-accept & instant streaming)');
+    } else {
+        turboModeBtn.className = 'turbo-btn disabled';
+        turboModeBtn.innerHTML = '<i data-lucide="zap-off"></i><span>Turbo: OFF</span>';
+        turboModeBtn.setAttribute('title', 'Turbo Mode: OFF (Click to enable auto-accept)');
+    }
+    lucide.createIcons();
+}
+
+updateTurboUI(isTurboModeEnabled);
+
 if (turboModeBtn) {
     turboModeBtn.addEventListener('click', () => {
         isTurboModeEnabled = !isTurboModeEnabled;
-        if (isTurboModeEnabled) {
-            turboModeBtn.className = 'turbo-btn active';
-            turboModeBtn.innerHTML = '<i data-lucide="zap"></i><span>Turbo: ON</span>';
-            showToast("Turbo Sharing Active: Documents stream immediately at line speed!", "success");
-        } else {
-            turboModeBtn.className = 'turbo-btn disabled';
-            turboModeBtn.innerHTML = '<i data-lucide="zap-off"></i><span>Turbo: OFF</span>';
-            showToast("Turbo Sharing Disabled: Manual confirmation required.", "info");
-        }
-        lucide.createIcons();
+        localStorage.setItem('sharewith_turbo', isTurboModeEnabled ? 'true' : 'false');
+        updateTurboUI(isTurboModeEnabled);
+        showToast(
+            isTurboModeEnabled ? "Turbo Sharing Active: Documents stream immediately at line speed!" : "Turbo Sharing Disabled: Manual confirmation required.",
+            isTurboModeEnabled ? "success" : "info"
+        );
     });
 }
 
@@ -1387,10 +1399,7 @@ const themeToggleBtn = document.getElementById('themeToggleBtn');
 function getStoredTheme() {
     const saved = localStorage.getItem('sharewith-theme');
     if (saved === 'light' || saved === 'dark') return saved;
-    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) {
-        return 'light';
-    }
-    return 'dark';
+    return 'light'; // Default: light mode
 }
 
 function updateThemeUI(theme) {
@@ -1418,7 +1427,7 @@ updateThemeUI(getStoredTheme());
 if (themeToggleBtn) {
     themeToggleBtn.addEventListener('click', (e) => {
         e.stopPropagation();
-        const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
+        const currentTheme = document.documentElement.getAttribute('data-theme') || 'light';
         const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
         setTheme(newTheme, true);
     });
