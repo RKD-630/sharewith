@@ -844,6 +844,58 @@ footer {
     transform: scale(0.95);
 }
 
+/* Notification Toggle Button */
+.notification-toggle-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: rgba(99, 102, 241, 0.12);
+    border: 1px solid rgba(99, 102, 241, 0.25);
+    color: var(--primary);
+    cursor: pointer;
+    margin-left: 0.35rem;
+    padding: 0;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    outline: none;
+    flex-shrink: 0;
+    position: relative;
+}
+
+.notification-toggle-btn svg,
+.notification-toggle-btn i {
+    width: 13px;
+    height: 13px;
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.notification-toggle-btn:hover {
+    background: var(--primary);
+    color: #ffffff;
+    border-color: var(--primary);
+    transform: scale(1.15);
+    box-shadow: 0 0 12px rgba(99, 102, 241, 0.5);
+}
+
+.notification-toggle-btn:active {
+    transform: scale(0.92);
+}
+
+.notification-toggle-btn.muted {
+    background: rgba(148, 163, 184, 0.12);
+    border-color: rgba(148, 163, 184, 0.25);
+    color: var(--text-muted);
+}
+
+.notification-toggle-btn.muted:hover {
+    background: #ef4444;
+    color: #ffffff;
+    border-color: #ef4444;
+    box-shadow: 0 0 12px rgba(239, 68, 68, 0.5);
+}
+
 /* Theme Toggle Button next to "i" Button */
 .theme-toggle-btn {
     display: inline-flex;
@@ -1181,3 +1233,178 @@ footer {
     font-weight: bold;
     flex-shrink: 0;
 }
+
+/* Turbo Quick Share Button */
+.turbo-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    background: rgba(16, 185, 129, 0.15);
+    color: var(--accent);
+    border: 1px solid rgba(16, 185, 129, 0.35);
+    padding: 0.35rem 0.75rem;
+    border-radius: 2rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.turbo-btn:hover {
+    background: rgba(16, 185, 129, 0.25);
+    transform: translateY(-1px);
+}
+
+.turbo-btn.active {
+    box-shadow: 0 0 12px rgba(16, 185, 129, 0.3);
+}
+
+.turbo-btn.disabled {
+    background: rgba(148, 163, 184, 0.1);
+    color: var(--text-muted);
+    border-color: rgba(148, 163, 184, 0.2);
+    box-shadow: none;
+}
+
+/* Send Action Area */
+.send-action-area {
+    margin-top: 1.5rem;
+    background: var(--input-bg);
+    border: 1px solid var(--border);
+    border-radius: 1.25rem;
+    padding: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+    width: 100%;
+}
+
+.send-instruction {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-align: center;
+}
+
+/* Selected Files Preview List */
+.selected-files-list {
+    margin-top: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    max-height: 180px;
+    overflow-y: auto;
+    width: 100%;
+    padding: 0.25rem;
+}
+
+.selected-file-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--card-bg-solid);
+    border: 1px solid var(--border);
+    padding: 0.6rem 0.9rem;
+    border-radius: 0.85rem;
+    font-size: 0.85rem;
+    gap: 0.75rem;
+}
+
+.selected-file-meta {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.selected-file-meta i {
+    color: var(--primary);
+    flex-shrink: 0;
+}
+
+.selected-file-name {
+    font-weight: 600;
+    color: var(--text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.selected-file-size {
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    flex-shrink: 0;
+}
+
+/* Received File List in Success Modal */
+.received-file-list {
+    margin: 1.25rem 0;
+    max-height: 220px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    width: 100%;
+    text-align: left;
+}
+
+.received-file-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--pill-bg);
+    border: 1px solid var(--border);
+    padding: 0.75rem 1rem;
+    border-radius: 1rem;
+    gap: 0.75rem;
+}
+
+.received-file-info {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    overflow: hidden;
+}
+
+.received-file-info i {
+    color: var(--accent);
+    flex-shrink: 0;
+}
+
+.received-file-title {
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: var(--text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.received-file-sub {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+.file-save-link-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    background: var(--primary);
+    color: white;
+    padding: 0.4rem 0.85rem;
+    border-radius: 0.75rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-decoration: none;
+    border: none;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background 0.2s ease;
+}
+
+.file-save-link-btn:hover {
+    background: var(--primary-dark);
+}
+

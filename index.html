@@ -43,6 +43,13 @@
             <div class="connection-status" id="connectionStatus">
                 <span class="status-dot offline"></span>
                 <span class="status-text">Connecting to server...</span>
+                <button type="button" class="turbo-btn active" id="turboModeBtn" title="Turbo Mode: Auto-accepts and streams at maximum WebRTC line speed">
+                    <i data-lucide="zap"></i>
+                    <span>Turbo: ON</span>
+                </button>
+                <button type="button" class="notification-toggle-btn" id="notificationToggleBtn" title="Notifications: ON (Click to mute messages)" aria-label="Toggle Notifications">
+                    <i data-lucide="bell" id="notificationToggleIcon"></i>
+                </button>
                 <button type="button" class="help-info-btn" id="syncHelpBtn" title="Help: How to connect & share documents" aria-label="Connection Guide">
                     <i data-lucide="info"></i>
                 </button>
@@ -97,8 +104,26 @@
 
                         <div class="file-drop-zone" id="dropZone">
                             <i data-lucide="file-plus" class="drop-icon"></i>
-                            <p>Drag & Drop or <span class="browse-link">Browse</span></p>
+                            <p>Drag & Drop Documents or <span class="browse-link">Browse</span></p>
                             <input type="file" id="fileInput" hidden multiple>
+                        </div>
+
+                        <div id="selectedFilesList" class="selected-files-list hidden"></div>
+
+                        <div class="send-action-area" id="sendActionArea">
+                            <p class="send-instruction">Send directly to receiver device:</p>
+                            <div class="input-group">
+                                <input type="text" id="targetIdSendInput" placeholder="Enter Receiver ID (e.g. ABC123)" autocomplete="off">
+                                <button id="sendNowBtn" class="primary-btn">
+                                    <i data-lucide="send"></i> Send Documents Now
+                                </button>
+                            </div>
+                            <div class="divider">
+                                <span>OR</span>
+                            </div>
+                            <button id="scanToSendBtn" class="secondary-btn">
+                                <i data-lucide="maximize"></i> Scan Receiver's QR Code
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -111,7 +136,7 @@
                             <input type="text" id="targetIdInput" placeholder="Sender ID (e.g. 123-456)"
                                 autocomplete="off">
                             <button id="connectBtn" class="primary-btn">
-                                <i data-lucide="link"></i> Connect
+                                <i data-lucide="link"></i> Connect & Receive
                             </button>
                         </div>
                         <div class="divider">
@@ -179,15 +204,16 @@
 
         <!-- Notification/Modal: Success -->
         <div id="successModal" class="modal hidden">
-            <div class="modal-content">
+            <div class="modal-content success-modal-content">
                 <div class="success-icon-box">
                     <i data-lucide="check-circle" class="success-icon"></i>
                 </div>
                 <h2>Transfer Complete!</h2>
-                <p id="successMsgText">The file has been received successfully.</p>
+                <p id="successMsgText">The documents have been received successfully.</p>
+                <div id="receivedFileList" class="received-file-list"></div>
                 <div class="modal-actions">
                     <button id="downloadAgainBtn" class="secondary-btn hidden">
-                        <i data-lucide="download"></i> Save File
+                        <i data-lucide="download"></i> Save All Documents
                     </button>
                     <button id="closeSuccessBtn" class="primary-btn">Done</button>
                 </div>
