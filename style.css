@@ -868,6 +868,84 @@ code {
     margin-top: 0.15rem;
 }
 
+/* Saved Files List in Success Modal */
+.saved-files-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    max-height: 160px;
+    overflow-y: auto;
+    margin: 1.25rem 0 0.5rem;
+    text-align: left;
+    width: 100%;
+    padding-right: 0.25rem;
+}
+
+.saved-file-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    background: var(--pill-bg);
+    border: 1px solid var(--border);
+    border-radius: 0.95rem;
+    padding: 0.65rem 0.95rem;
+    font-size: 0.85rem;
+    transition: all 0.2s ease;
+}
+
+.saved-file-item:hover {
+    border-color: rgba(99, 102, 241, 0.4);
+}
+
+.saved-file-name-wrap {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    min-width: 0;
+    flex: 1;
+}
+
+.saved-file-name-wrap i,
+.saved-file-name-wrap svg {
+    width: 18px;
+    height: 18px;
+    color: var(--primary);
+    flex-shrink: 0;
+}
+
+.saved-file-name {
+    font-weight: 600;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.saved-file-meta-right {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-shrink: 0;
+}
+
+.saved-file-size {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+.saved-file-badge {
+    background: rgba(99, 102, 241, 0.15);
+    border: 1px solid rgba(99, 102, 241, 0.3);
+    color: var(--primary);
+    font-size: 0.68rem;
+    font-weight: 700;
+    padding: 0.15rem 0.5rem;
+    border-radius: 9999px;
+    white-space: nowrap;
+    letter-spacing: 0.3px;
+}
+
 /* Transfer Summary Box in Success Modal */
 .transfer-summary-box {
     display: flex;
@@ -1092,6 +1170,54 @@ footer {
     .app-container { padding: 1rem; }
     .help-modal-content { padding: 1.5rem 1.25rem; }
     .steps-row { grid-template-columns: 1fr; }
+}
+
+/* Refresh Connection Button before "i" Button */
+.refresh-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: rgba(99, 102, 241, 0.15);
+    border: 1px solid rgba(99, 102, 241, 0.35);
+    color: var(--primary);
+    cursor: pointer;
+    margin-left: 0.35rem;
+    padding: 0;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    outline: none;
+    flex-shrink: 0;
+}
+
+.refresh-btn svg,
+.refresh-btn i {
+    width: 12px;
+    height: 12px;
+    transition: transform 0.3s ease;
+}
+
+.refresh-btn:hover {
+    background: var(--primary);
+    color: #ffffff;
+    border-color: var(--primary);
+    transform: scale(1.15);
+    box-shadow: 0 0 12px rgba(99, 102, 241, 0.6);
+}
+
+.refresh-btn:active {
+    transform: scale(0.95);
+}
+
+.refresh-btn.spinning svg,
+.refresh-btn.spinning i {
+    animation: rotate-spin 0.75s linear infinite;
+}
+
+@keyframes rotate-spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
 }
 
 /* Help "i" Info Button in Connection Status */
