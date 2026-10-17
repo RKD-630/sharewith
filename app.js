@@ -45,6 +45,7 @@ const declineBtn = document.getElementById('declineBtn');
 
 const successModal = document.getElementById('successModal');
 const successMsgText = document.getElementById('successMsgText');
+const savedFilesList = document.getElementById('savedFilesList');
 const transferSummaryBox = document.getElementById('transferSummaryBox');
 const sumTotalSize = document.getElementById('sumTotalSize');
 const sumAvgSpeed = document.getElementById('sumAvgSpeed');
@@ -136,6 +137,85 @@ function formatEta(seconds) {
     const m = Math.floor(seconds / 60);
     const s = Math.ceil(seconds % 60);
     return `${m}m ${s}s`;
+}
+
+// --- Continuous Serial Numbering for Downloaded Files ---
+const sessionDownloadedFiles = new Set();
+
+function getDownloadedFilesHistory() {
+    try {
+        const stored = localStorage.getItem('sharewith-downloaded-files');
+        return stored ? JSON.parse(stored) : [];
+    } catch (e) {
+        return [];
+    }
+}
+
+function recordDownloadedFileName(filename) {
+    if (!filename) return;
+    sessionDownloadedFiles.add(filename.toLowerCase());
+    try {
+        const history = getDownloadedFilesHistory();
+        if (!history.some(item => item.toLowerCase() === filename.toLowerCase())) {
+            history.push(filename);
+            if (history.length > 500) history.shift();
+            localStorage.setItem('sharewith-downloaded-files', JSON.stringify(history));
+        }
+    } catch (e) {}
+}
+
+function isFileNameTaken(filename) {
+    if (!filename) return false;
+    const lower = filename.toLowerCase();
+    if (sessionDownloadedFiles.has(lower)) return true;
+    const history = getDownloadedFilesHistory();
+    return history.some(item => item.toLowerCase() === lower);
+}
+
+/**
+ * Returns a unique, serialized file name if a file with this name was already saved.
+ * Automatically continues serial numbers:
+ *   "document.pdf" -> if exists: "document (1).pdf" -> "document (2).pdf" -> "document (3).pdf"
+ *   "report (1).pdf" -> if exists: "report (2).pdf"
+ */
+function getUniqueDownloadName(originalName) {
+    if (!originalName) originalName = 'document';
+
+    // If not taken, record and return as is
+    if (!isFileNameTaken(originalName)) {
+        recordDownloadedFileName(originalName);
+        return originalName;
+    }
+
+    // Split base name and extension
+    const dotIndex = originalName.lastIndexOf('.');
+    let base = originalName;
+    let ext = '';
+    if (dotIndex > 0) {
+        base = originalName.substring(0, dotIndex);
+        ext = originalName.substring(dotIndex); // includes '.'
+    }
+
+    // Check if the base already has a serial number like "name (1)" or "name (2)"
+    const serialMatch = base.match(/^(.*?)\s*\((\d+)\)$/);
+    let cleanBase = base;
+    let seq = 1;
+
+    if (serialMatch) {
+        cleanBase = serialMatch[1].trim();
+        seq = parseInt(serialMatch[2], 10) + 1;
+    }
+
+    // Find the next available continuous serial number
+    let candidate = '';
+    while (true) {
+        candidate = `${cleanBase} (${seq})${ext}`;
+        if (!isFileNameTaken(candidate)) {
+            recordDownloadedFileName(candidate);
+            return candidate;
+        }
+        seq++;
+    }
 }
 
 function startMetrics(mode, totalBytes, firstFileSize) {
@@ -372,20 +452,32 @@ function handleConnection(conn) {
             recordProgressBytes(byteLen);
 
         } else if (data.type === 'stream-end') {
-            // Document complete -> assemble and automatically trigger download/save
+            // Document complete -> assemble and automatically trigger download/save with serialized continuous naming
             const meta = incomingFiles[data.index] || {};
+            const uniqueName = getUniqueDownloadName(data.name);
+            const wasRenamed = uniqueName !== data.name;
             const blob = new Blob(receiveState.currentChunks, { type: meta.mimeType || meta.type || 'application/octet-stream' });
-            receivedBlobs.push({ name: data.name, blob: blob, size: blob.size });
+            receivedBlobs.push({ 
+                name: uniqueName, 
+                originalName: data.name, 
+                blob: blob, 
+                size: blob.size,
+                wasRenamed: wasRenamed 
+            });
 
             // Instant auto download to user's device
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = data.name;
+            a.download = uniqueName;
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
             setTimeout(() => URL.revokeObjectURL(url), 30000);
+
+            if (wasRenamed) {
+                showToast(`Saved as "${uniqueName}" (filename already exists)`);
+            }
 
             const totalCount = incomingFiles.length || 1;
             if (data.index === totalCount - 1) {
@@ -395,7 +487,11 @@ function handleConnection(conn) {
 
                 setTimeout(() => {
                     showSuccess(
-                        `${totalCount} Document(s) received and downloaded successfully!`, 
+                        totalCount > 1 
+                            ? `${totalCount} Document(s) received and downloaded successfully!` 
+                            : wasRenamed 
+                                ? `Saved as "${uniqueName}" (numbered sequentially)` 
+                                : `Document received and saved successfully!`, 
                         true, 
                         metrics.transferredTotalBytes, 
                         avgSpeed, 
@@ -407,22 +503,42 @@ function handleConnection(conn) {
 
         } else if (data.type === 'file-part') {
             // Fallback for legacy single-buffer transmissions
+            const uniqueName = getUniqueDownloadName(data.name);
+            const wasRenamed = uniqueName !== data.name;
             const blob = new Blob([data.buffer]);
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = data.name;
+            a.download = uniqueName;
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
             setTimeout(() => URL.revokeObjectURL(url), 30000);
 
-            receivedBlobs.push({ name: data.name, blob: blob, size: blob.size });
+            if (wasRenamed) {
+                showToast(`Saved as "${uniqueName}" (filename already exists)`);
+            }
+
+            receivedBlobs.push({ 
+                name: uniqueName, 
+                originalName: data.name, 
+                blob: blob, 
+                size: blob.size,
+                wasRenamed: wasRenamed 
+            });
             const progress = Math.round(((data.index + 1) / (incomingFiles.length || 1)) * 100);
             updateProgress(progress);
 
             if (data.index === (incomingFiles.length || 1) - 1) {
-                showSuccess(`${incomingFiles.length} Document(s) received successfully.`, true, blob.size, 0, 1);
+                showSuccess(
+                    wasRenamed 
+                        ? `Saved as "${uniqueName}" (numbered sequentially)` 
+                        : `${incomingFiles.length} Document(s) received successfully.`, 
+                    true, 
+                    blob.size, 
+                    0, 
+                    1
+                );
                 transferZone.classList.add('hidden');
             } else {
                 transferTitle.textContent = `Receiving (${data.index + 2}/${incomingFiles.length})...`;
@@ -915,10 +1031,60 @@ function formatBytes(bytes, decimals = 2) {
 
 function showSuccess(msg, showDownload = false, totalBytes = 0, avgSpeed = 0, durationSec = 0) {
     successMsgText.textContent = msg;
+
     if (showDownload && receivedBlobs.length > 0) {
         downloadAgainBtn.classList.remove('hidden');
+
+        if (savedFilesList) {
+            savedFilesList.innerHTML = '';
+            receivedBlobs.forEach(item => {
+                const row = document.createElement('div');
+                row.className = 'saved-file-item';
+
+                const left = document.createElement('div');
+                left.className = 'saved-file-name-wrap';
+
+                const icon = document.createElement('i');
+                icon.setAttribute('data-lucide', getFileIcon(item.name));
+
+                const nameSpan = document.createElement('span');
+                nameSpan.className = 'saved-file-name';
+                nameSpan.textContent = item.name;
+                nameSpan.title = item.wasRenamed 
+                    ? `Originally: ${item.originalName} → Saved as: ${item.name}` 
+                    : item.name;
+
+                left.appendChild(icon);
+                left.appendChild(nameSpan);
+
+                const right = document.createElement('div');
+                right.className = 'saved-file-meta-right';
+
+                if (item.wasRenamed) {
+                    const badge = document.createElement('span');
+                    badge.className = 'saved-file-badge';
+                    badge.textContent = 'Numbered (duplicate)';
+                    badge.title = `File name was already in use. Saved with continuous serial number.`;
+                    right.appendChild(badge);
+                }
+
+                const sizeSpan = document.createElement('span');
+                sizeSpan.className = 'saved-file-size';
+                sizeSpan.textContent = formatBytes(item.size || 0);
+                right.appendChild(sizeSpan);
+
+                row.appendChild(left);
+                row.appendChild(right);
+                savedFilesList.appendChild(row);
+            });
+            savedFilesList.classList.remove('hidden');
+        }
     } else {
         downloadAgainBtn.classList.add('hidden');
+        if (savedFilesList) {
+            savedFilesList.innerHTML = '';
+            savedFilesList.classList.add('hidden');
+        }
     }
 
     if (transferSummaryBox && totalBytes > 0) {
@@ -949,6 +1115,10 @@ downloadAgainBtn.addEventListener('click', () => {
 
 closeSuccessBtn.addEventListener('click', () => {
     successModal.classList.add('hidden');
+    if (savedFilesList) {
+        savedFilesList.innerHTML = '';
+        savedFilesList.classList.add('hidden');
+    }
     receivedBlobs = []; // Clear blobs after closing
 });
 
