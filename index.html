@@ -22,7 +22,7 @@
     <script>
         (function() {
             const saved = localStorage.getItem('sharewith-theme');
-            const theme = (saved === 'light' || saved === 'dark') ? saved : 'light';
+            const theme = saved || (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
             document.documentElement.setAttribute('data-theme', theme);
         })();
     </script>
@@ -43,18 +43,11 @@
             <div class="connection-status" id="connectionStatus">
                 <span class="status-dot offline"></span>
                 <span class="status-text">Connecting to server...</span>
-                <button type="button" class="turbo-btn disabled" id="turboModeBtn" title="Turbo Mode: OFF (Click to enable auto-accept)">
-                    <i data-lucide="zap-off"></i>
-                    <span>Turbo: OFF</span>
-                </button>
-                <button type="button" class="notification-toggle-btn muted" id="notificationToggleBtn" title="Notifications: OFF (Click to unmute messages)" aria-label="Toggle Notifications">
-                    <i data-lucide="bell-off" id="notificationToggleIcon"></i>
-                </button>
                 <button type="button" class="help-info-btn" id="syncHelpBtn" title="Help: How to connect & share documents" aria-label="Connection Guide">
                     <i data-lucide="info"></i>
                 </button>
-                <button type="button" class="theme-toggle-btn" id="themeToggleBtn" title="Switch to dark mode" aria-label="Switch to dark mode">
-                    <i data-lucide="moon" id="themeToggleIcon"></i>
+                <button type="button" class="theme-toggle-btn" id="themeToggleBtn" title="Toggle Light/Dark Theme" aria-label="Toggle Theme">
+                    <i data-lucide="sun" id="themeToggleIcon"></i>
                 </button>
             </div>
         </nav>
@@ -104,26 +97,8 @@
 
                         <div class="file-drop-zone" id="dropZone">
                             <i data-lucide="file-plus" class="drop-icon"></i>
-                            <p>Drag & Drop Documents or <span class="browse-link">Browse</span></p>
+                            <p>Drag & Drop or <span class="browse-link">Browse</span></p>
                             <input type="file" id="fileInput" hidden multiple>
-                        </div>
-
-                        <div id="selectedFilesList" class="selected-files-list hidden"></div>
-
-                        <div class="send-action-area" id="sendActionArea">
-                            <p class="send-instruction">Send directly to receiver device:</p>
-                            <div class="input-group">
-                                <input type="text" id="targetIdSendInput" placeholder="Enter Receiver ID (e.g. ABC123)" autocomplete="off">
-                                <button id="sendNowBtn" class="primary-btn">
-                                    <i data-lucide="send"></i> Send Documents Now
-                                </button>
-                            </div>
-                            <div class="divider">
-                                <span>OR</span>
-                            </div>
-                            <button id="scanToSendBtn" class="secondary-btn">
-                                <i data-lucide="maximize"></i> Scan Receiver's QR Code
-                            </button>
                         </div>
                     </div>
                 </div>
@@ -136,7 +111,7 @@
                             <input type="text" id="targetIdInput" placeholder="Sender ID (e.g. 123-456)"
                                 autocomplete="off">
                             <button id="connectBtn" class="primary-btn">
-                                <i data-lucide="link"></i> Connect & Receive
+                                <i data-lucide="link"></i> Connect
                             </button>
                         </div>
                         <div class="divider">
@@ -154,35 +129,88 @@
                 <div class="transfer-card">
                     <div id="radarAnimation" class="radar-container hidden">
                         <div class="radar"></div>
-                        <p id="radarText">Scanning Network...</p>
+                        <p id="radarStatusText">Optimizing P2P Channel for High-Speed Transfer...</p>
                     </div>
                     <div id="transferInfo" class="transfer-main">
                         <div class="transfer-header">
-                            <h3 id="transferTitle">Connecting...</h3>
-                            <i data-lucide="lock" class="secure-icon"></i>
+                            <div class="transfer-badge" id="transferModeBadge">
+                                <span class="badge-pulse"></span>
+                                <span id="transferBadgeText">Receiving Document</span>
+                            </div>
+                            <h3 id="transferTitle">Receiving...</h3>
+                            <div class="secure-badge" title="End-to-End Encrypted WebRTC">
+                                <i data-lucide="shield-check" class="secure-icon"></i>
+                                <span>Encrypted</span>
+                            </div>
                         </div>
-                        <div id="quickDownloadBadge" class="quick-download-badge hidden">
-                            <i data-lucide="zap"></i> Quick QR Download Active
-                        </div>
+
                         <div class="file-info">
-                            <div class="file-icon-box">
-                                <i data-lucide="file-down" id="transferFileIcon"></i>
+                            <div class="file-icon-box" id="fileIconBox">
+                                <i data-lucide="file-text" id="fileTypeIcon"></i>
                             </div>
                             <div class="file-details">
-                                <p id="fileNameText">document.pdf</p>
-                                <p id="fileSizeText">0 B / 25.4 MB</p>
+                                <p id="fileNameText" title="File Name">document.pdf</p>
+                                <div class="file-subdetails">
+                                    <span id="fileSizeText">25.4 MB</span>
+                                    <span id="batchCountBadge" class="batch-count-badge hidden">1 / 1</span>
+                                </div>
                             </div>
                         </div>
+
+                        <!-- Progress Bar & Speed Telemetry -->
                         <div class="progress-container">
-                            <div class="progress-bar">
-                                <div id="progressBarFill" class="progress-fill" style="width: 0%"></div>
+                            <div class="progress-meta-top">
+                                <span class="progress-status-label" id="progressStatusLabel">Downloading...</span>
+                                <span id="progressPercent" class="progress-percent-val">0%</span>
                             </div>
-                            <div class="progress-info-row">
-                                <span id="downloadStatusText" class="download-status-text">Downloading...</span>
-                                <span id="progressPercent">0%</span>
+                            <div class="progress-bar">
+                                <div id="progressBarFill" class="progress-fill" style="width: 0%">
+                                    <div class="progress-shine"></div>
+                                </div>
+                            </div>
+
+                            <!-- Overall batch progress (shown when multiple files) -->
+                            <div id="overallProgressContainer" class="overall-progress-container hidden">
+                                <div class="overall-progress-meta">
+                                    <span id="overallProgressLabel">Overall Progress</span>
+                                    <span id="overallProgressPercent">0%</span>
+                                </div>
+                                <div class="progress-bar overall-bar">
+                                    <div id="overallProgressBarFill" class="progress-fill overall-fill" style="width: 0%"></div>
+                                </div>
+                            </div>
+
+                            <!-- Live Telemetry / Speed Metrics HUD -->
+                            <div class="transfer-metrics-hud">
+                                <div class="metric-item">
+                                    <span class="metric-label">Transfer Speed</span>
+                                    <div class="metric-value-wrap">
+                                        <i data-lucide="zap" class="metric-icon speed-icon"></i>
+                                        <span id="transferSpeedText" class="metric-value">0 KB/s</span>
+                                    </div>
+                                </div>
+                                <div class="metric-item">
+                                    <span class="metric-label">Transferred</span>
+                                    <div class="metric-value-wrap">
+                                        <i data-lucide="hard-drive" class="metric-icon"></i>
+                                        <span id="transferredBytesText" class="metric-value">0 B / 0 B</span>
+                                    </div>
+                                </div>
+                                <div class="metric-item">
+                                    <span class="metric-label">Estimated Time</span>
+                                    <div class="metric-value-wrap">
+                                        <i data-lucide="clock" class="metric-icon"></i>
+                                        <span id="transferEtaText" class="metric-value">--</span>
+                                    </div>
+                                </div>
                             </div>
                         </div>
-                        <button class="cancel-btn" id="cancelTransferBtn">Cancel Transfer</button>
+
+                        <div class="transfer-actions">
+                            <button class="cancel-btn" id="cancelTransferBtn">
+                                <i data-lucide="x-circle"></i> Cancel
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -191,29 +219,56 @@
         <!-- Notification/Modal: Incoming File -->
         <div id="incomingModal" class="modal hidden">
             <div class="modal-content">
-                <i data-lucide="bell-ring" class="modal-icon"></i>
+                <div class="modal-icon-badge">
+                    <i data-lucide="arrow-down-circle" class="modal-icon"></i>
+                </div>
                 <h2>Incoming Document</h2>
-                <p id="incomingFileInfo">"Image.jpg" (1.2 MB)</p>
-                <p class="modal-desc">Someone wants to send you a document. Do you accept?</p>
+                <div class="incoming-preview-box">
+                    <i data-lucide="file-text" id="incomingDocIcon"></i>
+                    <div class="incoming-preview-details">
+                        <strong id="incomingFileInfo">"Document.pdf" (1.2 MB)</strong>
+                        <span class="incoming-sub">High-Speed Peer-to-Peer Transfer</span>
+                    </div>
+                </div>
+                <p class="modal-desc">A connected peer wants to send you this document. Accept to start fast download.</p>
                 <div class="modal-actions">
                     <button id="declineBtn" class="text-btn">Decline</button>
-                    <button id="acceptBtn" class="primary-btn">Accept & Receive</button>
+                    <button id="acceptBtn" class="primary-btn">
+                        <i data-lucide="download"></i> Accept & Receive
+                    </button>
                 </div>
             </div>
         </div>
 
         <!-- Notification/Modal: Success -->
         <div id="successModal" class="modal hidden">
-            <div class="modal-content success-modal-content">
+            <div class="modal-content">
                 <div class="success-icon-box">
                     <i data-lucide="check-circle" class="success-icon"></i>
                 </div>
                 <h2>Transfer Complete!</h2>
-                <p id="successMsgText">The documents have been received successfully.</p>
-                <div id="receivedFileList" class="received-file-list"></div>
+                <p id="successMsgText">The file has been received and saved successfully.</p>
+                
+                <div id="transferSummaryBox" class="transfer-summary-box">
+                    <div class="summary-metric">
+                        <span class="sum-label">Total Transferred</span>
+                        <span id="sumTotalSize" class="sum-value">0 MB</span>
+                    </div>
+                    <div class="summary-divider"></div>
+                    <div class="summary-metric">
+                        <span class="sum-label">Avg Speed</span>
+                        <span id="sumAvgSpeed" class="sum-value">0 MB/s</span>
+                    </div>
+                    <div class="summary-divider"></div>
+                    <div class="summary-metric">
+                        <span class="sum-label">Duration</span>
+                        <span id="sumTimeTaken" class="sum-value">0s</span>
+                    </div>
+                </div>
+
                 <div class="modal-actions">
                     <button id="downloadAgainBtn" class="secondary-btn hidden">
-                        <i data-lucide="download"></i> Save All Documents
+                        <i data-lucide="download"></i> Download / Save File
                     </button>
                     <button id="closeSuccessBtn" class="primary-btn">Done</button>
                 </div>

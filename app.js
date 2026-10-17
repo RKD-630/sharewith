@@ -15,35 +15,42 @@ const dropZone = document.getElementById('dropZone');
 const fileInput = document.getElementById('fileInput');
 
 const targetIdInput = document.getElementById('targetIdInput');
-const targetIdSendInput = document.getElementById('targetIdSendInput');
 const connectBtn = document.getElementById('connectBtn');
-const sendNowBtn = document.getElementById('sendNowBtn');
-const scanToSendBtn = document.getElementById('scanToSendBtn');
-const selectedFilesList = document.getElementById('selectedFilesList');
-const turboModeBtn = document.getElementById('turboModeBtn');
-const notificationToggleBtn = document.getElementById('notificationToggleBtn');
-const siteLocationCode = document.getElementById('siteLocationCode');
 
 const transferZone = document.getElementById('transferZone');
 const transferTitle = document.getElementById('transferTitle');
+const transferModeBadge = document.getElementById('transferModeBadge');
+const transferBadgeText = document.getElementById('transferBadgeText');
+const radarStatusText = document.getElementById('radarStatusText');
+const fileTypeIcon = document.getElementById('fileTypeIcon');
 const fileNameText = document.getElementById('fileNameText');
 const fileSizeText = document.getElementById('fileSizeText');
+const batchCountBadge = document.getElementById('batchCountBadge');
 const progressBarFill = document.getElementById('progressBarFill');
 const progressPercent = document.getElementById('progressPercent');
-const quickDownloadBadge = document.getElementById('quickDownloadBadge');
-const downloadStatusText = document.getElementById('downloadStatusText');
-const radarText = document.getElementById('radarText');
+const progressStatusLabel = document.getElementById('progressStatusLabel');
+const overallProgressContainer = document.getElementById('overallProgressContainer');
+const overallProgressLabel = document.getElementById('overallProgressLabel');
+const overallProgressPercent = document.getElementById('overallProgressPercent');
+const overallProgressBarFill = document.getElementById('overallProgressBarFill');
+const transferSpeedText = document.getElementById('transferSpeedText');
+const transferredBytesText = document.getElementById('transferredBytesText');
+const transferEtaText = document.getElementById('transferEtaText');
 
 const incomingModal = document.getElementById('incomingModal');
 const incomingFileInfo = document.getElementById('incomingFileInfo');
+const incomingDocIcon = document.getElementById('incomingDocIcon');
 const acceptBtn = document.getElementById('acceptBtn');
 const declineBtn = document.getElementById('declineBtn');
 
 const successModal = document.getElementById('successModal');
 const successMsgText = document.getElementById('successMsgText');
+const transferSummaryBox = document.getElementById('transferSummaryBox');
+const sumTotalSize = document.getElementById('sumTotalSize');
+const sumAvgSpeed = document.getElementById('sumAvgSpeed');
+const sumTimeTaken = document.getElementById('sumTimeTaken');
 const closeSuccessBtn = document.getElementById('closeSuccessBtn');
 const downloadAgainBtn = document.getElementById('downloadAgainBtn');
-const receivedFileList = document.getElementById('receivedFileList');
 
 const scanModal = document.getElementById('scanModal');
 const scanVideo = document.getElementById('scanVideo');
@@ -58,456 +65,399 @@ const transferInfo = document.getElementById('transferInfo');
 const methodIcons = document.querySelectorAll('.method-icon');
 const methodLabel = document.getElementById('methodLabel');
 
-// --- PeerJS & Offline State Variables ---
+// --- PeerJS / P2P State ---
 let peer = null;
 let currentConn = null;
-let currentFiles = []; // Array of files to send
+let currentFiles = []; // Array to store multiple files to send
 let currentFileIndex = 0;
-let receivedBlobs = []; // Array of received files
-let incomingFiles = []; // Incoming metadata
-let currentReceivingFile = null; // Currently streaming file object
-let isQrScanConnection = false; // Flag for QR scan quick download
-let isTurboModeEnabled = localStorage.getItem('sharewith_turbo') === 'true'; // Default: OFF
-let notificationsEnabled = localStorage.getItem('sharewith_notifications') === 'true'; // Default: OFF
-let isOfflineSharingActive = false; // Offline mode flag
-let lanChannel = null; // BroadcastChannel for LAN sync
+let receivedBlobs = []; // Array to store multiple received files
+let incomingFiles = []; // Array to store incoming file metadata
 let currentQrType = 'id';
 let myPeerId = '';
 let scanning = false;
-const CHUNK_SIZE = 64 * 1024; // 64 KB optimal chunk size for WebRTC streaming
-
-function getDocumentIcon(filename = '', mimeType = '') {
-    const ext = (filename.split('.').pop() || '').toLowerCase();
-    if (['pdf'].includes(ext) || (mimeType && mimeType.includes('pdf'))) return 'file-text';
-    if (['doc', 'docx', 'txt', 'rtf', 'odt', 'pages', 'md'].includes(ext) || (mimeType && (mimeType.includes('document') || mimeType.includes('text')))) return 'file-text';
-    if (['xls', 'xlsx', 'csv', 'numbers', 'tsv'].includes(ext) || (mimeType && (mimeType.includes('sheet') || mimeType.includes('csv')))) return 'file-spreadsheet';
-    if (['ppt', 'pptx', 'key'].includes(ext) || (mimeType && mimeType.includes('presentation'))) return 'presentation';
-    if (['zip', 'rar', '7z', 'tar', 'gz', 'bz2', 'xz'].includes(ext) || (mimeType && (mimeType.includes('zip') || mimeType.includes('compressed')))) return 'file-archive';
-    if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp', 'tiff'].includes(ext) || (mimeType && mimeType.includes('image'))) return 'file-image';
-    if (['mp4', 'mov', 'mkv', 'avi', 'webm', 'wmv'].includes(ext) || (mimeType && mimeType.includes('video'))) return 'file-video';
-    if (['mp3', 'wav', 'ogg', 'aac', 'flac', 'm4a'].includes(ext) || (mimeType && mimeType.includes('audio'))) return 'file-audio';
-    if (['js', 'ts', 'jsx', 'tsx', 'py', 'html', 'css', 'json', 'c', 'cpp', 'java', 'go', 'rs', 'php'].includes(ext)) return 'file-code';
-    return 'file';
-}
-
 let canvasElement = document.createElement("canvas");
 let canvas = canvasElement.getContext("2d", { willReadFrequently: true });
 
-// --- Offline Local Sharing Fallback System ---
-function initOfflineSharing() {
-    if ('BroadcastChannel' in window) {
-        lanChannel = new BroadcastChannel('sharewith_lan_channel');
-        lanChannel.onmessage = (e) => {
-            handleLanMessage(e.data);
-        };
-    }
+// Chunk Streaming & Performance Constants
+const CHUNK_SIZE = 64 * 1024; // 64 KB optimal WebRTC data channel chunk size
+const BUFFER_HIGH_WATER = 512 * 1024; // 512 KB backpressure ceiling
+const BUFFER_LOW_WATER = 128 * 1024;  // 128 KB resume drain threshold
+let isTransferAborted = false;
 
-    // Storage event fallback for same-origin tabs/windows
-    window.addEventListener('storage', (e) => {
-        if (e.key === 'sharewith_lan_msg' && e.newValue) {
-            try {
-                const data = JSON.parse(e.newValue);
-                handleLanMessage(data);
-            } catch (err) {}
-        }
-    });
+// Receiver State for Chunk Reassembly
+let receiveState = {
+    active: false,
+    currentFileIndex: 0,
+    currentChunks: [],
+    receivedBytesForFile: 0
+};
 
-    // Detect browser offline/online status automatically
-    window.addEventListener('offline', () => {
-        showToast("Internet disconnected. Switching to Offline Local Sharing mode...", "warning");
-        enableOfflineSharingMode();
-    });
+// Real-Time Speed & Telemetry Tracker
+let metrics = {
+    active: false,
+    mode: 'receive', // 'send' or 'receive'
+    startTime: 0,
+    totalBytes: 0,
+    transferredTotalBytes: 0,
+    currentFileBytes: 0,
+    currentFileSize: 0,
+    lastCalcTime: 0,
+    lastCalcBytes: 0,
+    speedSamples: [],
+    currentSpeed: 0
+};
 
-    window.addEventListener('online', () => {
-        showToast("Internet reconnected. Ready for Global & Local sharing.", "info");
-        statusDot.className = 'status-dot online';
-        statusText.textContent = 'Ready to sync';
-        isOfflineSharingActive = false;
-    });
-
-    if (!navigator.onLine) {
-        enableOfflineSharingMode();
-    }
+// Helper: Determine file icon by filename extension
+function getFileIcon(filename) {
+    if (!filename) return 'file-text';
+    const ext = filename.split('.').pop().toLowerCase();
+    if (['pdf'].includes(ext)) return 'file-text';
+    if (['doc', 'docx', 'txt', 'rtf', 'odt', 'pages', 'md', 'csv', 'xlsx', 'xls', 'pptx', 'ppt'].includes(ext)) return 'file-text';
+    if (['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'bmp', 'ico', 'heic', 'tiff'].includes(ext)) return 'image';
+    if (['zip', 'rar', '7z', 'tar', 'gz', 'bz2', 'iso', 'apk'].includes(ext)) return 'archive';
+    if (['mp3', 'wav', 'flac', 'aac', 'ogg', 'm4a', 'wma', 'opus'].includes(ext)) return 'music';
+    if (['mp4', 'mkv', 'mov', 'avi', 'webm', 'wmv', '3gp', 'flv'].includes(ext)) return 'video';
+    if (['js', 'ts', 'html', 'css', 'json', 'py', 'java', 'c', 'cpp', 'cs', 'php', 'rb', 'go', 'rs', 'sh', 'xml', 'sql'].includes(ext)) return 'code-2';
+    return 'file';
 }
 
-function enableOfflineSharingMode() {
-    isOfflineSharingActive = true;
-    statusDot.className = 'status-dot offline-lan';
-    statusText.textContent = 'Offline LAN Mode (Wi-Fi / Hotspot)';
+function formatSpeed(bytesPerSec) {
+    if (!bytesPerSec || bytesPerSec <= 0 || !isFinite(bytesPerSec)) return '0 KB/s';
+    if (bytesPerSec < 1024 * 1024) {
+        return (bytesPerSec / 1024).toFixed(1) + ' KB/s';
+    }
+    return (bytesPerSec / (1024 * 1024)).toFixed(2) + ' MB/s';
+}
+
+function formatEta(seconds) {
+    if (!seconds || seconds <= 0 || !isFinite(seconds)) return '--';
+    if (seconds < 1) return '< 1s';
+    if (seconds < 60) return `${Math.ceil(seconds)}s`;
+    const m = Math.floor(seconds / 60);
+    const s = Math.ceil(seconds % 60);
+    return `${m}m ${s}s`;
+}
+
+function startMetrics(mode, totalBytes, firstFileSize) {
+    const now = performance.now();
+    metrics = {
+        active: true,
+        mode: mode,
+        startTime: now,
+        totalBytes: totalBytes || 0,
+        transferredTotalBytes: 0,
+        currentFileBytes: 0,
+        currentFileSize: firstFileSize || 0,
+        lastCalcTime: now,
+        lastCalcBytes: 0,
+        speedSamples: [],
+        currentSpeed: 0
+    };
+    updateMetricsUI();
+}
+
+function recordProgressBytes(bytesAdded) {
+    if (!metrics.active) return;
+    metrics.transferredTotalBytes += bytesAdded;
+    metrics.currentFileBytes += bytesAdded;
+
+    const now = performance.now();
+    const elapsedSinceLast = (now - metrics.lastCalcTime) / 1000;
     
-    // Auto highlight Local Wi-Fi icon
-    methodIcons.forEach(icon => {
-        if (icon.dataset.method === 'Local Wi-Fi') {
-            icon.classList.add('active');
+    // Update rolling average speed every ~150ms for responsive and smooth UI
+    if (elapsedSinceLast >= 0.15) {
+        const bytesInInterval = metrics.transferredTotalBytes - metrics.lastCalcBytes;
+        const instantSpeed = bytesInInterval / elapsedSinceLast;
+        
+        metrics.speedSamples.push(instantSpeed);
+        if (metrics.speedSamples.length > 5) metrics.speedSamples.shift();
+        
+        const sum = metrics.speedSamples.reduce((a, b) => a + b, 0);
+        metrics.currentSpeed = sum / metrics.speedSamples.length;
+        
+        metrics.lastCalcTime = now;
+        metrics.lastCalcBytes = metrics.transferredTotalBytes;
+    }
+    
+    updateMetricsUI();
+}
+
+function updateMetricsUI() {
+    // Current file progress percentage
+    const filePct = metrics.currentFileSize > 0
+        ? Math.min(100, Math.round((metrics.currentFileBytes / metrics.currentFileSize) * 100))
+        : 0;
+    
+    if (progressBarFill) progressBarFill.style.width = `${filePct}%`;
+    if (progressPercent) progressPercent.textContent = `${filePct}%`;
+
+    // Speed display
+    if (transferSpeedText) {
+        transferSpeedText.textContent = formatSpeed(metrics.currentSpeed);
+    }
+    
+    // Transferred display
+    if (transferredBytesText) {
+        const currentBytesFormatted = formatBytes(metrics.transferredTotalBytes);
+        const totalBytesFormatted = formatBytes(metrics.totalBytes);
+        transferredBytesText.textContent = `${currentBytesFormatted} / ${totalBytesFormatted}`;
+    }
+
+    // Estimated remaining time (ETA)
+    if (transferEtaText) {
+        const remaining = Math.max(0, metrics.totalBytes - metrics.transferredTotalBytes);
+        if (metrics.currentSpeed > 0 && remaining > 0) {
+            const etaSec = remaining / metrics.currentSpeed;
+            transferEtaText.textContent = formatEta(etaSec);
+        } else if (remaining === 0 && metrics.transferredTotalBytes > 0) {
+            transferEtaText.textContent = 'Done!';
         } else {
-            icon.classList.remove('active');
-        }
-    });
-    if (methodLabel) methodLabel.textContent = 'Active Mode: Local Wi-Fi / Hotspot (Offline Sharing)';
-}
-
-function broadcastLan(data) {
-    if (lanChannel) {
-        try {
-            lanChannel.postMessage(data);
-        } catch (err) {
-            console.warn("BroadcastChannel postMessage error:", err);
+            transferEtaText.textContent = 'Estimating...';
         }
     }
-    // Only save metadata to localStorage if there is no large raw ArrayBuffer
-    if (!data.buffer) {
-        try {
-            localStorage.setItem('sharewith_lan_msg', JSON.stringify({ ...data, _ts: Date.now() }));
-        } catch (err) {}
-    }
-}
 
-function handleLanMessage(data) {
-    if (!data || !data.targetId) return;
-    
-    if (myPeerId && data.targetId.toUpperCase() === myPeerId.toUpperCase()) {
-        if (data.type === 'lan-connect') {
-            showToast("Offline connection request received!", "info");
-            if (currentFiles.length > 0) {
-                sendFileDataBatchLan(data.senderId);
-            }
-        } else if (data.type === 'lan-metadata-batch') {
-            incomingFiles = data.files;
-            acceptIncomingFilesQuickly();
-        } else if (data.type === 'lan-file-start') {
-            currentReceivingFile = {
-                fileId: data.fileId,
-                name: data.name,
-                size: data.size,
-                mimeType: data.mimeType || 'application/octet-stream',
-                fileIndex: data.fileIndex,
-                totalFiles: data.totalFiles,
-                chunks: [],
-                receivedBytes: 0,
-                startTime: Date.now()
-            };
-            transferZone.classList.remove('hidden');
-            radarContainer.classList.add('hidden');
-            transferInfo.classList.remove('hidden');
-            if (quickDownloadBadge) quickDownloadBadge.classList.remove('hidden');
-
-            transferTitle.textContent = data.totalFiles > 1 
-                ? `Offline Downloading (${data.fileIndex + 1}/${data.totalFiles})...`
-                : `Offline Downloading File...`;
-
-            fileNameText.textContent = data.name;
-            fileSizeText.textContent = `0 B / ${formatBytes(data.size)}`;
-            if (downloadStatusText) downloadStatusText.textContent = 'Downloading via Local Wi-Fi...';
-            updateProgress(0);
-        } else if (data.type === 'lan-file-chunk') {
-            if (currentReceivingFile && currentReceivingFile.fileId === data.fileId) {
-                let chunkBuffer;
-                if (data.buffer instanceof ArrayBuffer) {
-                    chunkBuffer = data.buffer;
-                } else if (data.base64) {
-                    const binary = atob(data.base64);
-                    const bytes = new Uint8Array(binary.length);
-                    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-                    chunkBuffer = bytes.buffer;
-                }
-                if (chunkBuffer) {
-                    currentReceivingFile.chunks.push(chunkBuffer);
-                    currentReceivingFile.receivedBytes += chunkBuffer.byteLength;
-                    const percent = Math.min(100, Math.round((currentReceivingFile.receivedBytes / currentReceivingFile.size) * 100));
-                    updateProgress(percent);
-                    fileSizeText.textContent = `${formatBytes(currentReceivingFile.receivedBytes)} / ${formatBytes(currentReceivingFile.size)}`;
-
-                    const elapsedSec = (Date.now() - currentReceivingFile.startTime) / 1000;
-                    if (elapsedSec > 0.2 && downloadStatusText) {
-                        const speed = currentReceivingFile.receivedBytes / elapsedSec;
-                        downloadStatusText.textContent = `${formatBytes(speed)}/s • Offline LAN`;
-                    }
-                }
-            }
-        } else if (data.type === 'lan-file-end') {
-            if (currentReceivingFile && currentReceivingFile.fileId === data.fileId) {
-                const blob = new Blob(currentReceivingFile.chunks, { type: currentReceivingFile.mimeType });
-                const fileName = currentReceivingFile.name;
-                triggerFileDownload(blob, fileName);
-                receivedBlobs.push({ name: fileName, blob: blob });
-                updateProgress(100);
-                showToast(`Offline Downloaded: ${fileName}`, "success");
-                if (currentReceivingFile.fileIndex === currentReceivingFile.totalFiles - 1) {
-                    setTimeout(() => {
-                        showSuccess(`${currentReceivingFile.totalFiles} file(s) downloaded offline successfully!`, true);
-                        transferZone.classList.add('hidden');
-                    }, 800);
-                }
-            }
-        }
+    // Overall progress (for batch transfers)
+    if (overallProgressBarFill && overallProgressPercent) {
+        const overallPct = metrics.totalBytes > 0
+            ? Math.min(100, Math.round((metrics.transferredTotalBytes / metrics.totalBytes) * 100))
+            : filePct;
+        overallProgressBarFill.style.width = `${overallPct}%`;
+        overallProgressPercent.textContent = `${overallPct}%`;
     }
 }
 
 // Initialize Peer
 function initPeer() {
+    // Generate a shorter, readable ID (optional, PeerJS generates longer ones by default)
     const customId = Math.random().toString(36).substr(2, 6).toUpperCase();
-    myPeerId = customId;
-    myIdEl.textContent = customId;
-    updateQR();
     
-    initOfflineSharing();
+    peer = new Peer(customId, {
+        debug: 3
+    });
 
-    try {
-        peer = new Peer(customId, {
-            debug: 1,
-            config: {
-                iceServers: [
-                    { urls: 'stun:stun.l.google.com:19302' },
-                    { urls: 'stun:stun1.l.google.com:19302' },
-                    { urls: 'stun:stun2.l.google.com:19302' },
-                    { urls: 'stun:stun3.l.google.com:19302' },
-                    { urls: 'stun:stun4.l.google.com:19302' },
-                    { urls: 'stun:stun.cloudflare.com:3478' }
-                ],
-                sdpSemantics: 'unified-plan'
+    peer.on('open', (id) => {
+        myPeerId = id;
+        myIdEl.textContent = id;
+        statusDot.className = 'status-dot online';
+        statusText.textContent = 'Ready to sync';
+        updateQR();
+    });
+
+    peer.on('error', (err) => {
+        console.error('Peer error:', err);
+        if (err.type === 'peer-unavailable') {
+            showToast("Device not found. Please verify the Connection ID or QR code.", "error");
+            if (transferZone) transferZone.classList.add('hidden');
+            if (radarContainer) radarContainer.classList.add('hidden');
+            return;
+        }
+        if (err.type === 'unavailable-id') {
+            setTimeout(initPeer, 500);
+            return;
+        }
+        statusDot.className = 'status-dot offline';
+        statusText.textContent = 'Offline (Retry in 5s)';
+        setTimeout(() => {
+            if (peer && !peer.destroyed) {
+                try { peer.destroy(); } catch (e) {}
             }
-        });
+            initPeer();
+        }, 5000);
+    });
 
-        peer.on('open', (id) => {
-            myPeerId = id;
-            myIdEl.textContent = id;
-            statusDot.className = 'status-dot online';
-            statusText.textContent = 'Ready to sync';
-            updateQR();
-        });
-
-        peer.on('error', (err) => {
-            console.error('Peer error:', err);
-            if (err.type === 'peer-unavailable') {
-                showToast("Online peer not found. Retrying via Local Sharing...", "warning");
-                return;
-            }
-            if (err.type === 'unavailable-id') {
-                setTimeout(initPeer, 500);
-                return;
-            }
-            // Auto fallback on server connection error
-            enableOfflineSharingMode();
-            showToast("Cloud server unreachable. Automatically switched to Offline Local Sharing mode!", "warning");
-        });
-
-        peer.on('connection', (conn) => {
-            handleConnection(conn);
-        });
-    } catch (e) {
-        console.warn("PeerJS failed to initialize, switching to offline mode:", e);
-        enableOfflineSharingMode();
-    }
+    // Handle Incoming Connection
+    peer.on('connection', (conn) => {
+        handleConnection(conn);
+    });
 }
 
 function handleConnection(conn) {
     currentConn = conn;
     
-    const setupConnection = () => {
+    conn.on('open', () => {
         console.log("Connection established with:", conn.peer);
-        if (conn._dc || conn.dataChannel) {
-            const dc = conn._dc || conn.dataChannel;
-            try {
-                dc.bufferedAmountLowThreshold = 512 * 1024;
-                dc.binaryType = 'arraybuffer';
-            } catch (e) {}
-        }
-
+        if (radarContainer) radarContainer.classList.add('hidden');
+        
+        // If we have files ready to send, initiate the metadata exchange
         if (currentFiles.length > 0) {
             conn.send({
                 type: 'metadata-batch',
-                files: currentFiles.map(f => ({ name: f.name, size: f.size, type: f.type })),
-                isQrScan: isQrScanConnection,
-                autoSend: isTurboModeEnabled
+                files: currentFiles.map(f => ({ name: f.name, size: f.size, type: f.type }))
             });
-            showToast(`Connected! Sending request for ${currentFiles.length} document(s)...`);
-        } else {
-            conn.send({
-                type: 'request-files',
-                receiverId: myPeerId,
-                autoAccept: isTurboModeEnabled || isQrScanConnection
-            });
+            showToast(`Connected! Sending transfer request for ${currentFiles.length} file(s)...`);
         }
-    };
-
-    if (conn.open) {
-        setupConnection();
-    } else {
-        conn.on('open', setupConnection);
-    }
+    });
 
     conn.on('data', (data) => {
-        if (data.type === 'request-files') {
-            if (currentFiles.length > 0) {
-                conn.send({
-                    type: 'metadata-batch',
-                    files: currentFiles.map(f => ({ name: f.name, size: f.size, type: f.type })),
-                    isQrScan: data.autoAccept || isQrScanConnection
-                });
-                if (data.autoAccept || isTurboModeEnabled) {
-                    sendFileDataBatch();
-                }
-            } else {
-                showToast("Connected to receiver! Please select documents to send.", "info");
-            }
-        } else if (data.type === 'metadata-batch') {
-            incomingFiles = data.files;
-            const totalSize = incomingFiles.reduce((acc, f) => acc + f.size, 0);
-            const names = incomingFiles.map(f => f.name).join(', ');
+        if (!data) return;
 
-            if (isQrScanConnection || data.isQrScan || isTurboModeEnabled) {
-                showToast("Direct stream authorized. Receiving documents...", "info");
-                acceptIncomingFilesQuickly();
+        if (data.type === 'metadata-batch') {
+            // Sender sent batch metadata, ask for acceptance
+            incomingFiles = data.files || [];
+            const totalSize = incomingFiles.reduce((acc, f) => acc + (f.size || 0), 0);
+            const firstFile = incomingFiles[0] || { name: 'Document' };
+            const names = incomingFiles.map(f => f.name).join(', ');
+            
+            incomingFileInfo.textContent = incomingFiles.length > 1
+                ? `${incomingFiles.length} Documents: ${names.length > 36 ? names.substring(0, 33) + '...' : names} (${formatBytes(totalSize)})`
+                : `"${firstFile.name}" (${formatBytes(totalSize)})`;
+            
+            if (incomingDocIcon) {
+                incomingDocIcon.setAttribute('data-lucide', getFileIcon(firstFile.name));
+            }
+            incomingModal.classList.remove('hidden');
+            lucide.createIcons();
+
+        } else if (data.type === 'stream-start') {
+            // Streaming start for incoming document
+            isTransferAborted = false;
+            receiveState.currentChunks = [];
+            receiveState.receivedBytesForFile = 0;
+            receiveState.currentFileIndex = data.index || 0;
+
+            transferZone.classList.remove('hidden');
+            if (radarContainer) radarContainer.classList.add('hidden');
+            if (transferInfo) transferInfo.classList.remove('hidden');
+
+            if (transferBadgeText) transferBadgeText.textContent = "📥 Downloading Document";
+            if (progressStatusLabel) progressStatusLabel.textContent = "High-Speed P2P Downloading...";
+            
+            const totalCount = incomingFiles.length || 1;
+            transferTitle.textContent = totalCount > 1 
+                ? `Downloading (${(data.index || 0) + 1}/${totalCount}): ${data.name}`
+                : `Downloading Document...`;
+            
+            fileNameText.textContent = data.name;
+            fileNameText.title = data.name;
+            fileSizeText.textContent = formatBytes(data.size || 0);
+
+            if (batchCountBadge) {
+                if (totalCount > 1) {
+                    batchCountBadge.textContent = `${(data.index || 0) + 1} / ${totalCount}`;
+                    batchCountBadge.classList.remove('hidden');
+                } else {
+                    batchCountBadge.classList.add('hidden');
+                }
+            }
+
+            if (fileTypeIcon) {
+                fileTypeIcon.setAttribute('data-lucide', getFileIcon(data.name));
+                lucide.createIcons();
+            }
+
+            if (overallProgressContainer) {
+                if (totalCount > 1) {
+                    overallProgressContainer.classList.remove('hidden');
+                } else {
+                    overallProgressContainer.classList.add('hidden');
+                }
+            }
+
+            // Start telemetry tracker if first document
+            if (data.index === 0 || !metrics.active) {
+                const totalBatchSize = incomingFiles.reduce((acc, f) => acc + (f.size || 0), 0) || data.size;
+                startMetrics('receive', totalBatchSize, data.size);
             } else {
-                incomingFileInfo.textContent = `${incomingFiles.length} Document(s): ${names.length > 40 ? names.substring(0, 37) + '...' : names} (${formatBytes(totalSize)})`;
-                incomingModal.classList.remove('hidden');
+                metrics.currentFileBytes = 0;
+                metrics.currentFileSize = data.size || 0;
+                updateMetricsUI();
+            }
+
+        } else if (data.type === 'stream-chunk') {
+            // Incoming chunk of document
+            if (isTransferAborted) return;
+            receiveState.currentChunks.push(data.data);
+            const byteLen = data.data ? (data.data.byteLength || data.data.size || 0) : 0;
+            receiveState.receivedBytesForFile += byteLen;
+            recordProgressBytes(byteLen);
+
+        } else if (data.type === 'stream-end') {
+            // Document complete -> assemble and automatically trigger download/save
+            const meta = incomingFiles[data.index] || {};
+            const blob = new Blob(receiveState.currentChunks, { type: meta.mimeType || meta.type || 'application/octet-stream' });
+            receivedBlobs.push({ name: data.name, blob: blob, size: blob.size });
+
+            // Instant auto download to user's device
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = data.name;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            setTimeout(() => URL.revokeObjectURL(url), 30000);
+
+            const totalCount = incomingFiles.length || 1;
+            if (data.index === totalCount - 1) {
+                // All documents received!
+                const totalDurationSec = Math.max(0.1, (performance.now() - metrics.startTime) / 1000);
+                const avgSpeed = metrics.transferredTotalBytes / totalDurationSec;
+
+                setTimeout(() => {
+                    showSuccess(
+                        `${totalCount} Document(s) received and downloaded successfully!`, 
+                        true, 
+                        metrics.transferredTotalBytes, 
+                        avgSpeed, 
+                        totalDurationSec
+                    );
+                    transferZone.classList.add('hidden');
+                }, 400);
+            }
+
+        } else if (data.type === 'file-part') {
+            // Fallback for legacy single-buffer transmissions
+            const blob = new Blob([data.buffer]);
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = data.name;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            setTimeout(() => URL.revokeObjectURL(url), 30000);
+
+            receivedBlobs.push({ name: data.name, blob: blob, size: blob.size });
+            const progress = Math.round(((data.index + 1) / (incomingFiles.length || 1)) * 100);
+            updateProgress(progress);
+
+            if (data.index === (incomingFiles.length || 1) - 1) {
+                showSuccess(`${incomingFiles.length} Document(s) received successfully.`, true, blob.size, 0, 1);
+                transferZone.classList.add('hidden');
+            } else {
+                transferTitle.textContent = `Receiving (${data.index + 2}/${incomingFiles.length})...`;
             }
 
         } else if (data.type === 'accept') {
+            // Receiver accepted, send all files with high-speed chunk streaming
             sendFileDataBatch();
 
         } else if (data.type === 'decline') {
             showToast("Transfer declined by receiver.", "error");
             transferZone.classList.add('hidden');
+            if (radarContainer) radarContainer.classList.add('hidden');
 
-        } else if (data.type === 'file-start') {
-            currentReceivingFile = {
-                fileId: data.fileId,
-                name: data.name,
-                size: data.size,
-                mimeType: data.mimeType || 'application/octet-stream',
-                fileIndex: data.fileIndex,
-                totalFiles: data.totalFiles,
-                totalChunks: data.totalChunks,
-                chunks: [],
-                receivedBytes: 0,
-                startTime: Date.now()
-            };
-
-            transferZone.classList.remove('hidden');
-            radarContainer.classList.add('hidden');
-            transferInfo.classList.remove('hidden');
-
-            const transferFileIcon = document.getElementById('transferFileIcon');
-            if (transferFileIcon) {
-                transferFileIcon.setAttribute('data-lucide', getDocumentIcon(data.name, data.mimeType));
-                lucide.createIcons();
-            }
-
-            if (quickDownloadBadge) {
-                if (isQrScanConnection || data.isQrScan || isTurboModeEnabled) {
-                    quickDownloadBadge.classList.remove('hidden');
-                } else {
-                    quickDownloadBadge.classList.add('hidden');
-                }
-            }
-
-            transferTitle.textContent = data.totalFiles > 1 
-                ? `Quick Downloading (${data.fileIndex + 1}/${data.totalFiles})...`
-                : `Quick Downloading Document...`;
-
-            fileNameText.textContent = data.name;
-            fileSizeText.textContent = `0 B / ${formatBytes(data.size)}`;
-            if (downloadStatusText) downloadStatusText.textContent = 'Starting high-speed download...';
-            updateProgress(0);
-
-        } else if (data.type === 'file-chunk') {
-            if (currentReceivingFile && currentReceivingFile.fileId === data.fileId) {
-                currentReceivingFile.chunks.push(data.buffer);
-                currentReceivingFile.receivedBytes += data.buffer.byteLength;
-
-                const percent = Math.min(100, Math.round((currentReceivingFile.receivedBytes / currentReceivingFile.size) * 100));
-                updateProgress(percent);
-                fileSizeText.textContent = `${formatBytes(currentReceivingFile.receivedBytes)} / ${formatBytes(currentReceivingFile.size)}`;
-
-                const elapsedSec = (Date.now() - currentReceivingFile.startTime) / 1000;
-                if (elapsedSec > 0.05 && downloadStatusText) {
-                    const speed = currentReceivingFile.receivedBytes / elapsedSec;
-                    downloadStatusText.textContent = `${formatBytes(speed)}/s • High-Speed P2P`;
-                }
-            }
-
-        } else if (data.type === 'file-end') {
-            if (currentReceivingFile && currentReceivingFile.fileId === data.fileId) {
-                const blob = new Blob(currentReceivingFile.chunks, { type: currentReceivingFile.mimeType });
-                const fileName = currentReceivingFile.name;
-
-                triggerFileDownload(blob, fileName);
-                receivedBlobs.push({ name: fileName, blob: blob });
-                updateProgress(100);
-
-                showToast(`Downloaded: ${fileName}`, "success");
-                if (downloadStatusText) downloadStatusText.textContent = 'Download Complete!';
-
-                if (currentReceivingFile.fileIndex === currentReceivingFile.totalFiles - 1) {
-                    setTimeout(() => {
-                        showSuccess(`${currentReceivingFile.totalFiles} document(s) downloaded successfully!`, true);
-                        transferZone.classList.add('hidden');
-                    }, 600);
-                }
-            }
-
-        } else if (data.type === 'file-part') {
-            const blob = new Blob([data.buffer]);
-            triggerFileDownload(blob, data.name);
-            receivedBlobs.push({ name: data.name, blob: blob });
-            updateProgress(100);
-            showSuccess(`Downloaded ${data.name}`, true);
+        } else if (data.type === 'cancel') {
+            isTransferAborted = true;
             transferZone.classList.add('hidden');
+            if (radarContainer) radarContainer.classList.add('hidden');
+            showToast("Transfer was cancelled by peer.", "error");
         }
     });
 
     conn.on('close', () => {
         showToast("Connection closed.", "info");
         console.log("Connection closed");
-        if (!transferZone.classList.contains('hidden') && progressPercent.textContent !== '100%') {
-            setTimeout(() => {
-                transferZone.classList.add('hidden');
-                radarContainer.classList.add('hidden');
-            }, 800);
-        }
     });
 
     conn.on('error', (err) => {
-        console.warn("Connection error:", err);
+        console.error("Connection error:", err);
+        showToast("Connection error encountered.", "error");
     });
 }
 
-function acceptIncomingFilesQuickly() {
-    incomingModal.classList.add('hidden');
-    transferZone.classList.remove('hidden');
-    radarContainer.classList.add('hidden');
-    transferInfo.classList.remove('hidden');
-    if (quickDownloadBadge) quickDownloadBadge.classList.remove('hidden');
-
-    if (incomingFiles && incomingFiles.length > 0) {
-        fileNameText.textContent = incomingFiles[0].name;
-        fileSizeText.textContent = `0 B / ${formatBytes(incomingFiles[0].size)}`;
-    }
-    transferTitle.textContent = "Quick Downloading File...";
-    if (downloadStatusText) downloadStatusText.textContent = "Connecting stream...";
-    updateProgress(0);
-
-    receivedBlobs = [];
-    if (currentConn) {
-        currentConn.send({ type: 'accept' });
-    }
-}
-
-function triggerFileDownload(blob, fileName) {
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = fileName;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    setTimeout(() => URL.revokeObjectURL(url), 60000);
-}
-
-// --- Toast Notification System ---
-function showToast(msg, type = "info", force = false) {
-    if (!notificationsEnabled && !force) return;
+// --- Toast System ---
+function showToast(msg, type = "info") {
     const toast = document.createElement('div');
     toast.className = `toast ${type}`;
     toast.textContent = msg;
@@ -560,34 +510,28 @@ function tick() {
 
         if (code) {
             console.log("Found QR code", code.data);
-            showToast("QR Code Scanned! Connecting for Quick Download...");
-            
-            let extractedId = code.data;
-            if (extractedId.includes('#')) {
-                extractedId = extractedId.split('#').pop();
-            }
-            targetIdInput.value = extractedId;
-            if (targetIdSendInput) targetIdSendInput.value = extractedId;
-            isQrScanConnection = true;
+            showToast("ID Found! Connecting...");
+            targetIdInput.value = code.data;
             stopScanner();
             
+            // Smarter redirection/action based on state
             if (currentFiles.length > 0) {
-                initiateSend(extractedId);
+                initiateSend(code.data);
             } else {
-                initiateReceive(extractedId);
+                // If no file, assume we are receiving
+                initiateReceive(code.data);
             }
         }
     }
     requestAnimationFrame(tick);
 }
 
-scanQrBtn.addEventListener('click', () => {
-    isQrScanConnection = true;
-    startScanner();
-});
+scanQrBtn.addEventListener('click', startScanner);
 closeScanBtn.addEventListener('click', stopScanner);
 
 // --- Interaction Logic ---
+
+// Tab Switching
 tabBtns.forEach(btn => {
     btn.addEventListener('click', () => {
         tabBtns.forEach(b => b.classList.remove('active'));
@@ -598,6 +542,7 @@ tabBtns.forEach(btn => {
     });
 });
 
+// File Selection
 dropZone.addEventListener('click', () => fileInput.click());
 
 fileInput.addEventListener('change', (e) => {
@@ -625,9 +570,16 @@ function prepareToSendBatch(files) {
     currentFiles = files;
     const totalSize = files.reduce((acc, f) => acc + f.size, 0);
     
-    fileNameText.textContent = files.length > 1 ? `${files.length} Documents Selected` : files[0].name;
+    fileNameText.textContent = files.length > 1 ? `${files.length} Files Selected` : files[0].name;
+    fileNameText.title = files.length > 1 ? `${files.length} Files Selected` : files[0].name;
     fileSizeText.textContent = formatBytes(totalSize);
+
+    if (fileTypeIcon) {
+        fileTypeIcon.setAttribute('data-lucide', getFileIcon(files[0].name));
+        lucide.createIcons();
+    }
     
+    // Switch UI to show files are selected
     const dropZoneIcon = dropZone.querySelector('.drop-icon');
     const dropZoneText = dropZone.querySelector('p');
     
@@ -639,377 +591,247 @@ function prepareToSendBatch(files) {
         lucide.createIcons();
     }
 
-    if (selectedFilesList) {
-        selectedFilesList.innerHTML = '';
-        files.forEach((file) => {
-            const item = document.createElement('div');
-            item.className = 'selected-file-item';
-            const icon = getDocumentIcon(file.name, file.type);
-            item.innerHTML = `
-                <div class="selected-file-meta">
-                    <i data-lucide="${icon}"></i>
-                    <span class="selected-file-name" title="${file.name}">${file.name}</span>
-                </div>
-                <span class="selected-file-size">${formatBytes(file.size)}</span>
-            `;
-            selectedFilesList.appendChild(item);
-        });
-        selectedFilesList.classList.remove('hidden');
-        lucide.createIcons();
-    }
-
-    const targetId = (targetIdSendInput && targetIdSendInput.value.trim()) || targetIdInput.value.trim();
+    const targetId = targetIdInput.value.trim().toUpperCase();
     if (targetId) {
         initiateSend(targetId);
     } else {
-        showToast("Documents ready! Enter Receiver ID or share your ID.", "info");
+        showToast("Files ready. Share your ID or scan the QR code to connect.");
     }
 }
 
 function initiateSend(targetId) {
-    if (!targetId) return;
-    targetId = targetId.trim().toUpperCase();
-
-    if (!peer || !navigator.onLine) {
-        fallbackToOfflineSend(targetId);
-        return;
-    }
+    if (!peer) return;
+    isTransferAborted = false;
     
     transferZone.classList.remove('hidden');
     radarContainer.classList.remove('hidden');
-    if (radarText) radarText.textContent = `Connecting directly to ${targetId}...`;
     transferInfo.classList.add('hidden');
+    if (radarStatusText) radarStatusText.textContent = "Connecting to peer device...";
+    
     progressBarFill.style.width = '0%';
     progressPercent.textContent = '0%';
+    if (transferSpeedText) transferSpeedText.textContent = '0 KB/s';
+    if (transferredBytesText) transferredBytesText.textContent = '0 B';
+    if (transferEtaText) transferEtaText.textContent = '--';
 
-    let connected = false;
+    const conn = peer.connect(targetId, { reliable: true });
+    handleConnection(conn);
 
-    try {
-        const conn = peer.connect(targetId, {
-            reliable: true
-        });
-        handleConnection(conn);
-
-        conn.on('open', () => {
-            connected = true;
-            radarContainer.classList.add('hidden');
-            transferInfo.classList.remove('hidden');
-            transferTitle.textContent = "Connected! Starting transmission...";
-        });
-        
-        conn.on('error', (err) => {
-            console.warn("Online send connection error, switching to Offline LAN...", err);
-            if (!connected) fallbackToOfflineSend(targetId);
-        });
-    } catch (e) {
-        fallbackToOfflineSend(targetId);
-        return;
-    }
-
-    // WebRTC STUN negotiation timeout (12s gives ICE enough time on mobile/Wi-Fi)
-    setTimeout(() => {
-        if (!connected) {
-            console.warn("Peer connection taking longer. Attempting Local fallback...");
-            fallbackToOfflineSend(targetId);
-        }
-    }, 12000);
-}
-
-function fallbackToOfflineSend(targetId) {
-    enableOfflineSharingMode();
-    showToast("Online server unreachable. Switched automatically to Offline Local Sharing mode!", "warning");
-    
-    broadcastLan({
-        type: 'lan-metadata-batch',
-        targetId: targetId,
-        senderId: myPeerId,
-        files: currentFiles.map(f => ({ name: f.name, size: f.size, type: f.type }))
+    conn.on('open', () => {
+        radarContainer.classList.add('hidden');
+        transferInfo.classList.remove('hidden');
+        transferTitle.textContent = "Requesting Access from Peer...";
+        if (transferBadgeText) transferBadgeText.textContent = "Connecting";
+        if (progressStatusLabel) progressStatusLabel.textContent = "Waiting for approval...";
     });
     
-    sendFileDataBatchLan(targetId);
+    conn.on('error', (err) => {
+        console.error("Connection error:", err);
+        showToast("Device Discovery / Connection Failed", "error");
+        transferZone.classList.add('hidden');
+        radarContainer.classList.add('hidden');
+    });
 }
 
 function initiateReceive(targetId) {
-    if (!targetId) return;
-    targetId = targetId.trim().toUpperCase();
-
-    if (!peer || !navigator.onLine) {
-        fallbackToOfflineReceive(targetId);
-        return;
-    }
+    if (!peer) return;
+    isTransferAborted = false;
 
     transferZone.classList.remove('hidden');
     radarContainer.classList.remove('hidden');
-    if (radarText) radarText.textContent = isQrScanConnection ? "Connecting via QR Quick Link..." : `Connecting to sender ${targetId}...`;
     transferInfo.classList.add('hidden');
+    if (radarStatusText) radarStatusText.textContent = "Connecting to sender host...";
+
     progressBarFill.style.width = '0%';
     progressPercent.textContent = '0%';
+    if (transferSpeedText) transferSpeedText.textContent = '0 KB/s';
+    if (transferredBytesText) transferredBytesText.textContent = '0 B';
+    if (transferEtaText) transferEtaText.textContent = '--';
 
-    let connected = false;
+    const conn = peer.connect(targetId, { reliable: true });
+    handleConnection(conn);
 
-    try {
-        const conn = peer.connect(targetId, {
-            reliable: true
-        });
-        handleConnection(conn);
-
-        conn.on('open', () => {
-            connected = true;
-            radarContainer.classList.add('hidden');
-            transferInfo.classList.remove('hidden');
-            transferTitle.textContent = "Connected to Host!";
-        });
-
-        conn.on('error', () => {
-            console.warn("Online receive connection error, switching to Offline LAN...");
-            if (!connected) fallbackToOfflineReceive(targetId);
-        });
-    } catch (e) {
-        fallbackToOfflineReceive(targetId);
-        return;
-    }
-
-    setTimeout(() => {
-        if (!connected) {
-            console.warn("Receive connection taking longer. Attempting Local fallback...");
-            fallbackToOfflineReceive(targetId);
-        }
-    }, 12000);
-}
-
-function fallbackToOfflineReceive(targetId) {
-    enableOfflineSharingMode();
-    showToast("Online server unreachable. Switched automatically to Offline Local Sharing mode!", "warning");
-    
-    broadcastLan({
-        type: 'lan-connect',
-        targetId: targetId,
-        senderId: myPeerId
+    conn.on('open', () => {
+        radarContainer.classList.add('hidden');
+        transferInfo.classList.remove('hidden');
+        transferTitle.textContent = "Connected to Host";
+        if (transferBadgeText) transferBadgeText.textContent = "Ready";
+        if (progressStatusLabel) progressStatusLabel.textContent = "Waiting for sender to push files...";
     });
-    
-    radarContainer.classList.add('hidden');
-    transferInfo.classList.remove('hidden');
-    transferTitle.textContent = "Waiting for Offline Transmission...";
-    if (downloadStatusText) downloadStatusText.textContent = "Listening on Local Wi-Fi / Hotspot...";
+
+    conn.on('error', (err) => {
+        console.error("Connection error:", err);
+        showToast("Connection to Host Failed", "error");
+        transferZone.classList.add('hidden');
+        radarContainer.classList.add('hidden');
+    });
 }
 
 async function sendFileDataBatch() {
+    isTransferAborted = false;
     transferZone.classList.remove('hidden');
     radarContainer.classList.add('hidden');
     transferInfo.classList.remove('hidden');
-    transferTitle.textContent = "High-Speed Transmission...";
-    if (quickDownloadBadge) quickDownloadBadge.classList.remove('hidden');
 
-    const dc = currentConn ? (currentConn.dataChannel || currentConn._dc) : null;
-    if (dc) {
-        try {
-            dc.bufferedAmountLowThreshold = 512 * 1024;
-        } catch (e) {}
+    const totalBatchSize = currentFiles.reduce((acc, f) => acc + f.size, 0);
+    startMetrics('send', totalBatchSize, currentFiles[0]?.size || 0);
+
+    if (transferBadgeText) transferBadgeText.textContent = "📤 Sending Document";
+    if (progressStatusLabel) progressStatusLabel.textContent = "High-Speed P2P Streaming...";
+
+    if (currentFiles.length > 1) {
+        overallProgressContainer.classList.remove('hidden');
+    } else {
+        overallProgressContainer.classList.add('hidden');
     }
 
     for (let i = 0; i < currentFiles.length; i++) {
+        if (isTransferAborted) break;
         const file = currentFiles[i];
-        const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
-        const fileId = 'file_' + Math.random().toString(36).substr(2, 7);
+
+        metrics.currentFileBytes = 0;
+        metrics.currentFileSize = file.size;
 
         fileNameText.textContent = file.name;
-        transferTitle.textContent = `Sending (${i + 1}/${currentFiles.length}): ${file.name}`;
-        if (downloadStatusText) downloadStatusText.textContent = 'High-Speed Streaming...';
+        fileNameText.title = file.name;
+        fileSizeText.textContent = formatBytes(file.size);
 
-        const transferFileIcon = document.getElementById('transferFileIcon');
-        if (transferFileIcon) {
-            transferFileIcon.setAttribute('data-lucide', getDocumentIcon(file.name, file.type));
+        if (batchCountBadge) {
+            if (currentFiles.length > 1) {
+                batchCountBadge.textContent = `${i + 1} / ${currentFiles.length}`;
+                batchCountBadge.classList.remove('hidden');
+            } else {
+                batchCountBadge.classList.add('hidden');
+            }
+        }
+
+        if (fileTypeIcon) {
+            fileTypeIcon.setAttribute('data-lucide', getFileIcon(file.name));
             lucide.createIcons();
         }
 
+        transferTitle.textContent = currentFiles.length > 1
+            ? `Sending Document (${i + 1}/${currentFiles.length})`
+            : `Sending Document...`;
+
+        const totalChunks = Math.ceil(file.size / CHUNK_SIZE) || 1;
+
+        // Send stream-start
         currentConn.send({
-            type: 'file-start',
-            fileId: fileId,
+            type: 'stream-start',
+            index: i,
             name: file.name,
             size: file.size,
             mimeType: file.type || 'application/octet-stream',
-            fileIndex: i,
-            totalFiles: currentFiles.length,
             totalChunks: totalChunks
         });
 
+        // Fast chunk streaming directly from File slice
         let offset = 0;
         let chunkIndex = 0;
-        const startTime = Date.now();
-        let lastUiUpdate = 0;
 
-        while (offset < file.size) {
-            if (dc && dc.bufferedAmount > 1024 * 1024) {
+        while (offset < file.size && !isTransferAborted) {
+            const slice = file.slice(offset, offset + CHUNK_SIZE);
+            const buffer = await slice.arrayBuffer();
+
+            // WebRTC dataChannel backpressure management
+            const dc = currentConn.dataChannel;
+            if (dc && dc.bufferedAmount > BUFFER_HIGH_WATER) {
                 await new Promise(resolve => {
-                    let done = false;
-                    const onLow = () => {
-                        if (!done) {
-                            done = true;
-                            if (dc.removeEventListener) {
-                                dc.removeEventListener('bufferedamountlow', onLow);
-                            } else {
-                                dc.onbufferedamountlow = null;
-                            }
+                    const checkBuffer = () => {
+                        if (!dc || dc.readyState !== 'open' || isTransferAborted) {
                             resolve();
+                            return;
+                        }
+                        if (dc.bufferedAmount <= BUFFER_LOW_WATER) {
+                            resolve();
+                        } else {
+                            setTimeout(checkBuffer, 10);
                         }
                     };
-                    if (dc.addEventListener) {
-                        dc.addEventListener('bufferedamountlow', onLow, { once: true });
+                    if ('onbufferedamountlow' in dc) {
+                        dc.bufferedAmountLowThreshold = BUFFER_LOW_WATER;
+                        dc.onbufferedamountlow = () => {
+                            dc.onbufferedamountlow = null;
+                            resolve();
+                        };
                     } else {
-                        dc.onbufferedamountlow = onLow;
+                        setTimeout(checkBuffer, 10);
                     }
-                    setTimeout(onLow, 20);
                 });
             }
 
-            const chunk = file.slice(offset, offset + CHUNK_SIZE);
-            const arrayBuffer = await chunk.arrayBuffer();
+            if (isTransferAborted) break;
 
             currentConn.send({
-                type: 'file-chunk',
-                fileId: fileId,
+                type: 'stream-chunk',
+                index: i,
                 chunkIndex: chunkIndex,
-                buffer: arrayBuffer
+                data: buffer
             });
 
-            offset += chunk.size;
+            offset += buffer.byteLength;
             chunkIndex++;
-
-            const now = Date.now();
-            if (now - lastUiUpdate > 50 || offset >= file.size) {
-                lastUiUpdate = now;
-                const pct = Math.min(100, Math.round((offset / file.size) * 100));
-                updateProgress(pct);
-                fileSizeText.textContent = `${formatBytes(Math.min(offset, file.size))} / ${formatBytes(file.size)}`;
-
-                const elapsedSec = (now - startTime) / 1000;
-                if (elapsedSec > 0.05 && downloadStatusText) {
-                    const speed = offset / elapsedSec;
-                    downloadStatusText.textContent = `${formatBytes(speed)}/s • Ultra-Fast P2P`;
-                }
-            }
+            recordProgressBytes(buffer.byteLength);
         }
 
+        if (isTransferAborted) break;
+
+        // Send stream-end
         currentConn.send({
-            type: 'file-end',
-            fileId: fileId,
+            type: 'stream-end',
+            index: i,
             name: file.name
         });
-
-        await new Promise(r => setTimeout(r, 40));
     }
 
-    setTimeout(() => {
-        showSuccess(`${currentFiles.length} Document(s) sent successfully!`);
-        transferZone.classList.add('hidden');
-    }, 600);
-}
+    if (!isTransferAborted) {
+        const totalDurationSec = Math.max(0.1, (performance.now() - metrics.startTime) / 1000);
+        const avgSpeed = metrics.transferredTotalBytes / totalDurationSec;
 
-async function sendFileDataBatchLan(targetId) {
-    transferZone.classList.remove('hidden');
-    radarContainer.classList.add('hidden');
-    transferInfo.classList.remove('hidden');
-    transferTitle.textContent = "Offline Transmitting...";
-    if (quickDownloadBadge) quickDownloadBadge.classList.add('hidden');
-
-    for (let i = 0; i < currentFiles.length; i++) {
-        const file = currentFiles[i];
-        const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
-        const fileId = 'file_lan_' + Math.random().toString(36).substr(2, 7);
-
-        fileNameText.textContent = file.name;
-        transferTitle.textContent = `Offline Sending (${i + 1}/${currentFiles.length}): ${file.name}`;
-        if (downloadStatusText) downloadStatusText.textContent = 'Sending over Local Network...';
-
-        const transferFileIcon = document.getElementById('transferFileIcon');
-        if (transferFileIcon) {
-            transferFileIcon.setAttribute('data-lucide', getDocumentIcon(file.name, file.type));
-            lucide.createIcons();
-        }
-
-        broadcastLan({
-            type: 'lan-file-start',
-            targetId: targetId,
-            senderId: myPeerId,
-            fileId: fileId,
-            name: file.name,
-            size: file.size,
-            mimeType: file.type || 'application/octet-stream',
-            fileIndex: i,
-            totalFiles: currentFiles.length,
-            totalChunks: totalChunks
-        });
-
-        let offset = 0;
-        let chunkIndex = 0;
-        const startTime = Date.now();
-        let lastUiUpdate = 0;
-
-        while (offset < file.size) {
-            const chunk = file.slice(offset, offset + CHUNK_SIZE);
-            const arrayBuffer = await chunk.arrayBuffer();
-
-            broadcastLan({
-                type: 'lan-file-chunk',
-                targetId: targetId,
-                senderId: myPeerId,
-                fileId: fileId,
-                chunkIndex: chunkIndex,
-                buffer: arrayBuffer
-            });
-
-            offset += chunk.size;
-            chunkIndex++;
-
-            const now = Date.now();
-            if (now - lastUiUpdate > 50 || offset >= file.size) {
-                lastUiUpdate = now;
-                const pct = Math.min(100, Math.round((offset / file.size) * 100));
-                updateProgress(pct);
-                fileSizeText.textContent = `${formatBytes(Math.min(offset, file.size))} / ${formatBytes(file.size)}`;
-
-                const elapsedSec = (now - startTime) / 1000;
-                if (elapsedSec > 0.05 && downloadStatusText) {
-                    const speed = offset / elapsedSec;
-                    downloadStatusText.textContent = `${formatBytes(speed)}/s • Local Sharing`;
-                }
-            }
-
-            if (chunkIndex % 16 === 0) {
-                await new Promise(r => setTimeout(r, 0));
-            }
-        }
-
-        broadcastLan({
-            type: 'lan-file-end',
-            targetId: targetId,
-            senderId: myPeerId,
-            fileId: fileId,
-            name: file.name
-        });
-
-        await new Promise(r => setTimeout(r, 40));
+        setTimeout(() => {
+            showSuccess(
+                `${currentFiles.length} Document(s) sent successfully!`, 
+                false, 
+                metrics.transferredTotalBytes, 
+                avgSpeed, 
+                totalDurationSec
+            );
+            transferZone.classList.add('hidden');
+        }, 400);
     }
-
-    setTimeout(() => {
-        showSuccess(`${currentFiles.length} Document(s) sent via Offline Local Sharing!`);
-        transferZone.classList.add('hidden');
-    }, 600);
 }
 
 function updateProgress(val) {
-    progressBarFill.style.width = `${val}%`;
-    progressPercent.textContent = `${val}%`;
+    if (progressBarFill) progressBarFill.style.width = `${val}%`;
+    if (progressPercent) progressPercent.textContent = `${val}%`;
 }
 
-// --- Receivers Actions ---
+// Receiver actions
 acceptBtn.addEventListener('click', () => {
-    acceptIncomingFilesQuickly();
+    incomingModal.classList.add('hidden');
+    transferZone.classList.remove('hidden');
+    radarContainer.classList.add('hidden');
+    transferInfo.classList.remove('hidden');
+
+    const totalBatchSize = incomingFiles.reduce((acc, f) => acc + (f.size || 0), 0);
+    startMetrics('receive', totalBatchSize, incomingFiles[0]?.size || 0);
+
+    if (transferBadgeText) transferBadgeText.textContent = "📥 Downloading Document";
+    transferTitle.textContent = incomingFiles.length > 1 
+        ? `Downloading Document (1/${incomingFiles.length})...`
+        : `Downloading Document...`;
+    if (progressStatusLabel) progressStatusLabel.textContent = "Requesting stream from sender...";
+
+    receivedBlobs = [];
+    if (currentConn && currentConn.open) {
+        currentConn.send({ type: 'accept' });
+    }
 });
 
 declineBtn.addEventListener('click', () => {
     incomingModal.classList.add('hidden');
-    if (currentConn) {
+    if (currentConn && currentConn.open) {
         currentConn.send({ type: 'decline' });
     }
 });
@@ -1023,16 +845,10 @@ function updateQR() {
     let label = "Scan this QR code from another device";
     const urlDisplay = document.getElementById('urlDisplay');
 
-    const baseUrl = window.location.origin + window.location.pathname;
-    const shareUrl = baseUrl + '#' + myPeerId;
-
-    if (siteLocationCode) {
-        siteLocationCode.textContent = shareUrl;
-    }
-
     if (currentQrType === 'url') {
-        text = shareUrl;
-        label = "Scan to open & auto-receive on another device";
+        const baseUrl = window.location.origin + window.location.pathname;
+        text = baseUrl + '#' + myPeerId;
+        label = "Scan this to open site on another device";
         urlDisplay.classList.remove('hidden');
     } else {
         urlDisplay.classList.add('hidden');
@@ -1044,12 +860,13 @@ function updateQR() {
         height: 160,
         colorDark : "#0f172a",
         colorLight : "#ffffff",
-        correctLevel : QRCode.CorrectLevel.M
+        correctLevel : QRCode.CorrectLevel.H
     });
 
     document.getElementById('qrLabel').textContent = label;
 }
 
+// Generate QR helper (legacy wrapper)
 function generateQR(id) {
     myPeerId = id;
     updateQR();
@@ -1059,18 +876,15 @@ function generateQR(id) {
 window.addEventListener('load', () => {
     const hash = window.location.hash;
     if (hash && hash.length > 1) {
-        const id = hash.substring(1).toUpperCase();
-        if (id && id.length === 6) {
+        const id = hash.substring(1);
+        if (id && id.length === 6) { // Basic length check for our 6-char IDs
             targetIdInput.value = id;
-            if (targetIdSendInput) targetIdSendInput.value = id;
-            isQrScanConnection = true;
             tabBtns.forEach(b => b.classList.remove('active'));
             tabContents.forEach(c => c.classList.remove('active'));
             document.querySelector('[data-tab="receive"]').classList.add('active');
             document.getElementById('receiveTab').classList.add('active');
             
-            showToast("Quick Download Link detected from QR Code!");
-            initiateReceive(id);
+            showToast("Auto-filled sender ID from link!");
         }
     }
 });
@@ -1099,51 +913,43 @@ function formatBytes(bytes, decimals = 2) {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
 }
 
-function showSuccess(msg, showDownload = false) {
+function showSuccess(msg, showDownload = false, totalBytes = 0, avgSpeed = 0, durationSec = 0) {
     successMsgText.textContent = msg;
-    if (receivedFileList) {
-        receivedFileList.innerHTML = '';
-        if (showDownload && receivedBlobs.length > 0) {
-            receivedBlobs.forEach((item, idx) => {
-                const row = document.createElement('div');
-                row.className = 'received-file-item';
-                const iconName = getDocumentIcon(item.name, item.blob ? item.blob.type : '');
-                const sizeStr = item.blob ? formatBytes(item.blob.size) : '';
-                row.innerHTML = `
-                    <div class="received-file-info">
-                        <i data-lucide="${iconName}"></i>
-                        <div>
-                            <div class="received-file-title" title="${item.name}">${item.name}</div>
-                            <div class="received-file-sub">${sizeStr} • Ready</div>
-                        </div>
-                    </div>
-                    <button type="button" class="file-save-link-btn" data-index="${idx}">
-                        <i data-lucide="download"></i> Save
-                    </button>
-                `;
-                row.querySelector('.file-save-link-btn').addEventListener('click', () => {
-                    triggerFileDownload(item.blob, item.name);
-                });
-                receivedFileList.appendChild(row);
-            });
-            lucide.createIcons();
-            downloadAgainBtn.classList.remove('hidden');
-        } else {
-            downloadAgainBtn.classList.add('hidden');
-        }
+    if (showDownload && receivedBlobs.length > 0) {
+        downloadAgainBtn.classList.remove('hidden');
+    } else {
+        downloadAgainBtn.classList.add('hidden');
     }
+
+    if (transferSummaryBox && totalBytes > 0) {
+        transferSummaryBox.classList.remove('hidden');
+        if (sumTotalSize) sumTotalSize.textContent = formatBytes(totalBytes);
+        if (sumAvgSpeed) sumAvgSpeed.textContent = formatSpeed(avgSpeed);
+        if (sumTimeTaken) sumTimeTaken.textContent = durationSec < 1 ? '< 1s' : `${durationSec.toFixed(1)}s`;
+    } else if (transferSummaryBox) {
+        transferSummaryBox.classList.add('hidden');
+    }
+
     successModal.classList.remove('hidden');
+    lucide.createIcons();
 }
 
 downloadAgainBtn.addEventListener('click', () => {
     receivedBlobs.forEach(item => {
-        triggerFileDownload(item.blob, item.name);
+        const url = URL.createObjectURL(item.blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = item.name;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(url), 30000);
     });
 });
 
 closeSuccessBtn.addEventListener('click', () => {
     successModal.classList.add('hidden');
-    receivedBlobs = [];
+    receivedBlobs = []; // Clear blobs after closing
 });
 
 // Copy ID
@@ -1152,80 +958,9 @@ document.getElementById('copyIdBtn').addEventListener('click', () => {
     showToast("Connection ID copied!");
 });
 
-// Sync Target Inputs
-if (targetIdSendInput) {
-    targetIdSendInput.addEventListener('input', (e) => {
-        targetIdInput.value = e.target.value.toUpperCase();
-    });
-}
-if (targetIdInput) {
-    targetIdInput.addEventListener('input', (e) => {
-        if (targetIdSendInput) targetIdSendInput.value = e.target.value.toUpperCase();
-    });
-}
-
-// Send Directly Button in Send Tab
-if (sendNowBtn) {
-    sendNowBtn.addEventListener('click', () => {
-        const targetId = (targetIdSendInput.value || targetIdInput.value).trim().toUpperCase();
-        if (!targetId) {
-            showToast("Please enter the receiver's Connection ID.", "error");
-            if (targetIdSendInput) targetIdSendInput.focus();
-            return;
-        }
-        if (myPeerId && targetId === myPeerId.toUpperCase()) {
-            showToast("Cannot connect to your own device ID.", "error");
-            return;
-        }
-        if (currentFiles.length === 0) {
-            showToast("Please select documents first.", "warning");
-            fileInput.click();
-            return;
-        }
-        initiateSend(targetId);
-    });
-}
-
-// Scan to Send Button in Send Tab
-if (scanToSendBtn) {
-    scanToSendBtn.addEventListener('click', () => {
-        isQrScanConnection = true;
-        startScanner();
-    });
-}
-
-// Turbo Mode Button
-function updateTurboUI(enabled) {
-    if (!turboModeBtn) return;
-    if (enabled) {
-        turboModeBtn.className = 'turbo-btn active';
-        turboModeBtn.innerHTML = '<i data-lucide="zap"></i><span>Turbo: ON</span>';
-        turboModeBtn.setAttribute('title', 'Turbo Mode: ON (Auto-accept & instant streaming)');
-    } else {
-        turboModeBtn.className = 'turbo-btn disabled';
-        turboModeBtn.innerHTML = '<i data-lucide="zap-off"></i><span>Turbo: OFF</span>';
-        turboModeBtn.setAttribute('title', 'Turbo Mode: OFF (Click to enable auto-accept)');
-    }
-    lucide.createIcons();
-}
-
-updateTurboUI(isTurboModeEnabled);
-
-if (turboModeBtn) {
-    turboModeBtn.addEventListener('click', () => {
-        isTurboModeEnabled = !isTurboModeEnabled;
-        localStorage.setItem('sharewith_turbo', isTurboModeEnabled ? 'true' : 'false');
-        updateTurboUI(isTurboModeEnabled);
-        showToast(
-            isTurboModeEnabled ? "Turbo Sharing Active: Documents stream immediately at line speed!" : "Turbo Sharing Disabled: Manual confirmation required.",
-            isTurboModeEnabled ? "success" : "info"
-        );
-    });
-}
-
 // Manual Connect Button
 connectBtn.addEventListener('click', () => {
-    const targetId = (targetIdInput.value || (targetIdSendInput && targetIdSendInput.value) || '').trim().toUpperCase();
+    const targetId = targetIdInput.value.trim().toUpperCase();
     if (!targetId) {
         showToast("Enter the ID of the receiver.", "error");
         return;
@@ -1243,11 +978,16 @@ connectBtn.addEventListener('click', () => {
 
 // Cancel Transfer Logic
 cancelTransferBtn.addEventListener('click', () => {
-    if (currentConn) {
-        currentConn.close();
+    isTransferAborted = true;
+    metrics.active = false;
+    if (currentConn && currentConn.open) {
+        try {
+            currentConn.send({ type: 'cancel' });
+            currentConn.close();
+        } catch (e) {}
     }
     transferZone.classList.add('hidden');
-    radarContainer.classList.add('hidden');
+    if (radarContainer) radarContainer.classList.add('hidden');
     scanning = false;
     showToast("Transfer Aborted", "error");
 });
@@ -1272,6 +1012,7 @@ let logoQrInstance = null;
 logoBtn.addEventListener('click', () => {
     logoQrModal.classList.remove('hidden');
     
+    // Generate URL including Peer ID if available
     const baseUrl = window.location.origin + window.location.pathname;
     const text = baseUrl + (myPeerId ? '#' + myPeerId : '');
     
@@ -1330,6 +1071,7 @@ if (helpGuideModal) {
     });
 }
 
+// Sync active method with guide cards
 function syncActiveGuideMethod() {
     const activeIcon = document.querySelector('.method-icon.active');
     const activeMethod = activeIcon ? activeIcon.dataset.method : 'Smart Connect';
@@ -1347,6 +1089,7 @@ function syncActiveGuideMethod() {
     });
 }
 
+// Method selection from help guide
 document.querySelectorAll('.option-select-btn').forEach(btn => {
     btn.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -1366,6 +1109,7 @@ document.querySelectorAll('.option-select-btn').forEach(btn => {
     });
 });
 
+// Allow clicking the card directly
 document.querySelectorAll('.help-option-card').forEach(card => {
     card.addEventListener('click', () => {
         const targetMethod = card.getAttribute('data-guide-method');
@@ -1384,7 +1128,7 @@ document.querySelectorAll('.help-option-card').forEach(card => {
     });
 });
 
-// ESC key listener
+// ESC key listener to dismiss modals
 window.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
         if (helpGuideModal && !helpGuideModal.classList.contains('hidden')) closeHelpGuide();
@@ -1399,7 +1143,10 @@ const themeToggleBtn = document.getElementById('themeToggleBtn');
 function getStoredTheme() {
     const saved = localStorage.getItem('sharewith-theme');
     if (saved === 'light' || saved === 'dark') return saved;
-    return 'light'; // Default: light mode
+    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) {
+        return 'light';
+    }
+    return 'dark';
 }
 
 function updateThemeUI(theme) {
@@ -1422,17 +1169,19 @@ function setTheme(theme, showNotification = false) {
     }
 }
 
+// Initialize theme UI
 updateThemeUI(getStoredTheme());
 
 if (themeToggleBtn) {
     themeToggleBtn.addEventListener('click', (e) => {
         e.stopPropagation();
-        const currentTheme = document.documentElement.getAttribute('data-theme') || 'light';
+        const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
         const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
         setTheme(newTheme, true);
     });
 }
 
+// Listen to system theme preference changes if user hasn't explicitly set one
 if (window.matchMedia) {
     window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', (e) => {
         if (!localStorage.getItem('sharewith-theme')) {
@@ -1441,38 +1190,7 @@ if (window.matchMedia) {
     });
 }
 
-// --- Notification Toggle Logic ---
-function updateNotificationUI(enabled) {
-    if (!notificationToggleBtn) return;
-    if (enabled) {
-        notificationToggleBtn.className = 'notification-toggle-btn';
-        notificationToggleBtn.innerHTML = '<i data-lucide="bell"></i>';
-        notificationToggleBtn.setAttribute('title', 'Notifications: ON (Click to mute messages)');
-        notificationToggleBtn.setAttribute('aria-label', 'Notifications ON');
-    } else {
-        notificationToggleBtn.className = 'notification-toggle-btn muted';
-        notificationToggleBtn.innerHTML = '<i data-lucide="bell-off"></i>';
-        notificationToggleBtn.setAttribute('title', 'Notifications: OFF (Click to unmute messages)');
-        notificationToggleBtn.setAttribute('aria-label', 'Notifications OFF');
-    }
-    lucide.createIcons();
-}
-
-updateNotificationUI(notificationsEnabled);
-
-if (notificationToggleBtn) {
-    notificationToggleBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        notificationsEnabled = !notificationsEnabled;
-        localStorage.setItem('sharewith_notifications', notificationsEnabled ? 'true' : 'false');
-        updateNotificationUI(notificationsEnabled);
-        showToast(
-            notificationsEnabled ? "Notifications: ON (Action messages will show)" : "Notifications: OFF (Action messages muted)",
-            notificationsEnabled ? "info" : "warning",
-            true
-        );
-    });
-}
-
 // Initial Start
 initPeer();
+
+
