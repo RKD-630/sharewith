@@ -43,9 +43,6 @@
             <div class="connection-status" id="connectionStatus">
                 <span class="status-dot offline"></span>
                 <span class="status-text">Connecting to server...</span>
-                <button type="button" class="refresh-btn" id="refreshBtn" title="Refresh Connection & ID" aria-label="Refresh Connection">
-                    <i data-lucide="rotate-cw" id="refreshIcon"></i>
-                </button>
                 <button type="button" class="help-info-btn" id="syncHelpBtn" title="Help: How to connect & share documents" aria-label="Connection Guide">
                     <i data-lucide="info"></i>
                 </button>
@@ -79,8 +76,11 @@
                             <span class="label">Your Connection ID:</span>
                             <div class="id-row">
                                 <code id="myId">------</code>
-                                <button class="icon-btn" id="copyIdBtn" title="Copy ID">
+                                <button class="icon-btn" id="copyIdBtn" title="Copy ID" aria-label="Copy Connection ID">
                                     <i data-lucide="copy"></i>
+                                </button>
+                                <button type="button" class="icon-btn refresh-btn" id="refreshBtn" title="Refresh Connection & ID" aria-label="Refresh Connection">
+                                    <i data-lucide="rotate-cw" id="refreshIcon"></i>
                                 </button>
                             </div>
                         </div>
@@ -460,6 +460,28 @@
             <div class="modal-actions" style="margin-top: 1.5rem; justify-content: flex-end;">
                 <button id="closeHelpGuideBtn2" class="primary-btn">Got It</button>
             </div>
+        </div>
+    </div>
+
+    <!-- First-Time Welcome Onboarding Notification -->
+    <div id="welcomeNotification" class="welcome-notification hidden" role="region" aria-label="Welcome notification">
+        <div class="welcome-header">
+            <div class="welcome-title-wrap">
+                <div class="welcome-badge-icon">
+                    <i data-lucide="sparkles"></i>
+                </div>
+                <strong>Welcome to Share With!</strong>
+            </div>
+            <button type="button" class="welcome-close-btn" id="closeWelcomeBtn" aria-label="Close Welcome">&times;</button>
+        </div>
+        <p class="welcome-desc">Direct P2P file sharing with end-to-end encryption. No file size limits and zero cloud storage.</p>
+        <div class="welcome-actions">
+            <button type="button" id="welcomeGuideBtn" class="welcome-btn welcome-guide-btn">
+                <i data-lucide="book-open"></i> Quick Guide
+            </button>
+            <button type="button" id="welcomeDismissBtn" class="welcome-btn welcome-gotit-btn">
+                Got it!
+            </button>
         </div>
     </div>
 

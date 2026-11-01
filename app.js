@@ -321,7 +321,7 @@ function initPeer() {
         myPeerId = id;
         myIdEl.textContent = id;
         statusDot.className = 'status-dot online';
-        statusText.textContent = 'Ready to sync';
+        statusText.textContent = '';
         if (refreshBtn) refreshBtn.classList.remove('spinning');
         updateQR();
     });
@@ -535,49 +535,6 @@ function handleConnection(conn) {
                     );
                     transferZone.classList.add('hidden');
                 }, 400);
-            }
-
-        } else if (data.type === 'file-part') {
-            // Fallback for legacy single-buffer transmissions
-            const uniqueName = getUniqueDownloadName(data.name);
-            const wasRenamed = uniqueName !== data.name;
-            const blob = new Blob([data.buffer]);
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = uniqueName;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            setTimeout(() => URL.revokeObjectURL(url), 30000);
-
-            if (wasRenamed) {
-                showToast(`Saved as "${uniqueName}" (filename already exists)`);
-            }
-
-            receivedBlobs.push({ 
-                name: uniqueName, 
-                originalName: data.name, 
-                blob: blob, 
-                size: blob.size,
-                wasRenamed: wasRenamed 
-            });
-            const progress = Math.round(((data.index + 1) / (incomingFiles.length || 1)) * 100);
-            updateProgress(progress);
-
-            if (data.index === (incomingFiles.length || 1) - 1) {
-                showSuccess(
-                    wasRenamed 
-                        ? `Saved as "${uniqueName}" (numbered sequentially)` 
-                        : `${incomingFiles.length} Document(s) received successfully.`, 
-                    true, 
-                    blob.size, 
-                    0, 
-                    1
-                );
-                transferZone.classList.add('hidden');
-            } else {
-                transferTitle.textContent = `Receiving (${data.index + 2}/${incomingFiles.length})...`;
             }
 
         } else if (data.type === 'accept') {
@@ -1018,12 +975,6 @@ function updateQR() {
     document.getElementById('qrLabel').textContent = label;
 }
 
-// Generate QR helper (legacy wrapper)
-function generateQR(id) {
-    myPeerId = id;
-    updateQR();
-}
-
 // Check for auto-connect in URL hash
 window.addEventListener('load', () => {
     const hash = window.location.hash;
@@ -1057,7 +1008,7 @@ document.getElementById('qrUrlBtn').addEventListener('click', () => {
 });
 
 function formatBytes(bytes, decimals = 2) {
-    if (bytes === 0) return '0 Bytes';
+    if (!bytes || bytes <= 0 || isNaN(bytes)) return '0 Bytes';
     const k = 1024;
     const dm = decimals < 0 ? 0 : decimals;
     const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
@@ -1334,12 +1285,15 @@ document.querySelectorAll('.help-option-card').forEach(card => {
     });
 });
 
-// ESC key listener to dismiss modals
+// Global keyboard shortcuts (ESC to dismiss modals, Ctrl+R to open Test Suite)
 window.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
         if (helpGuideModal && !helpGuideModal.classList.contains('hidden')) closeHelpGuide();
         if (logoQrModal && !logoQrModal.classList.contains('hidden')) logoQrModal.classList.add('hidden');
         if (scanModal && !scanModal.classList.contains('hidden')) stopScanner();
+    } else if ((e.ctrlKey || e.metaKey) && (e.key === 'r' || e.key === 'R')) {
+        e.preventDefault();
+        refreshConnection();
     }
 });
 
@@ -1396,7 +1350,59 @@ if (window.matchMedia) {
     });
 }
 
+// --- First-Time Welcome Onboarding Notification ---
+const welcomeNotification = document.getElementById('welcomeNotification');
+const closeWelcomeBtn = document.getElementById('closeWelcomeBtn');
+const welcomeGuideBtn = document.getElementById('welcomeGuideBtn');
+const welcomeDismissBtn = document.getElementById('welcomeDismissBtn');
+
+const FIRST_TIME_WELCOME_KEY = 'sharewith-welcome-shown';
+
+function isFirstTimeUser() {
+    try {
+        return !localStorage.getItem(FIRST_TIME_WELCOME_KEY);
+    } catch (e) {
+        return false;
+    }
+}
+
+function showWelcomeNotification() {
+    if (!welcomeNotification) return;
+    welcomeNotification.classList.remove('hidden');
+    lucide.createIcons();
+}
+
+function dismissWelcomeNotification() {
+    if (!welcomeNotification) return;
+    welcomeNotification.classList.add('hidden');
+    try {
+        localStorage.setItem(FIRST_TIME_WELCOME_KEY, 'true');
+    } catch (e) {}
+}
+
+function checkFirstTimeWelcome() {
+    if (isFirstTimeUser()) {
+        setTimeout(() => {
+            showWelcomeNotification();
+        }, 500);
+    }
+}
+
+if (closeWelcomeBtn) closeWelcomeBtn.addEventListener('click', dismissWelcomeNotification);
+if (welcomeDismissBtn) welcomeDismissBtn.addEventListener('click', dismissWelcomeNotification);
+if (welcomeGuideBtn) {
+    welcomeGuideBtn.addEventListener('click', () => {
+        dismissWelcomeNotification();
+        openHelpGuide();
+    });
+}
+
+// Check first-time welcome notification on startup
+checkFirstTimeWelcome();
+
 // Initial Start
 initPeer();
+
+
 
 

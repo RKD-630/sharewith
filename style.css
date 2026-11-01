@@ -147,6 +147,7 @@ nav {
 .status-dot.online { background-color: var(--accent); }
 .status-dot.offline { background-color: #ef4444; }
 .status-text { font-size: 0.875rem; color: var(--text-muted); }
+.status-text:empty { display: none; }
 
 /* Hero */
 .hero {
@@ -1154,6 +1155,152 @@ footer {
 
 @keyframes slideUp { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 
+/* First-Time Welcome Notification */
+.welcome-notification {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    max-width: 380px;
+    background: var(--modal-bg);
+    border: 1px solid var(--border);
+    border-radius: 1.25rem;
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(20px);
+    padding: 1.25rem;
+    z-index: 9998;
+    animation: slideInRight 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+[data-theme="light"] .welcome-notification {
+    box-shadow: 0 16px 40px rgba(99, 102, 241, 0.15);
+}
+
+.welcome-notification.hidden {
+    display: none !important;
+}
+
+@keyframes slideInRight {
+    from {
+        opacity: 0;
+        transform: translateY(20px) scale(0.96);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.welcome-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.6rem;
+}
+
+.welcome-title-wrap {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+}
+
+.welcome-badge-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
+    color: white;
+}
+
+.welcome-badge-icon svg,
+.welcome-badge-icon i {
+    width: 15px;
+    height: 15px;
+}
+
+.welcome-title-wrap strong {
+    font-size: 0.98rem;
+    font-weight: 700;
+    color: var(--text);
+}
+
+.welcome-close-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    font-size: 1.35rem;
+    cursor: pointer;
+    line-height: 1;
+    padding: 2px 6px;
+    border-radius: 6px;
+    transition: color 0.2s ease, background 0.2s ease;
+}
+
+.welcome-close-btn:hover {
+    color: var(--text);
+    background: var(--pill-bg);
+}
+
+.welcome-desc {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    line-height: 1.45;
+    margin-bottom: 0.9rem;
+}
+
+.welcome-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+}
+
+.welcome-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    padding: 0.45rem 0.9rem;
+    border-radius: 0.65rem;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.welcome-guide-btn {
+    background: var(--primary);
+    color: #ffffff;
+    border: none;
+}
+
+.welcome-guide-btn:hover {
+    background: var(--primary-dark);
+    transform: translateY(-1px);
+}
+
+.welcome-gotit-btn {
+    background: var(--pill-bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+}
+
+.welcome-gotit-btn:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+}
+
+@media (max-width: 480px) {
+    .welcome-notification {
+        left: 16px;
+        right: 16px;
+        bottom: 16px;
+        max-width: none;
+    }
+}
+
 /* Animations Improvement */
 @keyframes fadeIn {
     from { opacity: 0; transform: translateY(10px); }
@@ -1172,38 +1319,35 @@ footer {
     .steps-row { grid-template-columns: 1fr; }
 }
 
-/* Refresh Connection Button before "i" Button */
+/* Refresh button in Connection ID row */
 .refresh-btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 22px;
-    height: 22px;
-    border-radius: 50%;
-    background: rgba(99, 102, 241, 0.15);
-    border: 1px solid rgba(99, 102, 241, 0.35);
-    color: var(--primary);
+    width: auto;
+    height: auto;
+    padding: 0.75rem;
+    border-radius: 0.75rem;
+    background: var(--pill-bg);
+    border: 1px solid var(--border);
+    color: var(--text);
     cursor: pointer;
-    margin-left: 0.35rem;
-    padding: 0;
-    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-    outline: none;
-    flex-shrink: 0;
+    transition: all 0.25s ease;
 }
 
 .refresh-btn svg,
 .refresh-btn i {
-    width: 12px;
-    height: 12px;
+    width: 20px;
+    height: 20px;
     transition: transform 0.3s ease;
 }
 
 .refresh-btn:hover {
-    background: var(--primary);
-    color: #ffffff;
     border-color: var(--primary);
-    transform: scale(1.15);
-    box-shadow: 0 0 12px rgba(99, 102, 241, 0.6);
+    color: var(--primary);
+    background: var(--pill-bg);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2);
 }
 
 .refresh-btn:active {
