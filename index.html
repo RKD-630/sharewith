@@ -18,11 +18,9 @@
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
-    <!-- JSZip for ZIP Handling & In-Browser Execution -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <link rel="stylesheet" href="style.css">
     <script>
-        (function () {
+        (function() {
             const saved = localStorage.getItem('sharewith-theme');
             const theme = saved || (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
             document.documentElement.setAttribute('data-theme', theme);
@@ -45,17 +43,10 @@
             <div class="connection-status" id="connectionStatus">
                 <span class="status-dot offline"></span>
                 <span class="status-text">Connecting to server...</span>
-                <button type="button" class="nav-share-app-btn" id="navShareAppBtn"
-                    title="Share or Export this Application" aria-label="Share App">
-                    <i data-lucide="share-2"></i>
-                    <span>Share App</span>
-                </button>
-                <button type="button" class="help-info-btn" id="syncHelpBtn"
-                    title="Help: How to connect & share documents" aria-label="Connection Guide">
+                <button type="button" class="help-info-btn" id="syncHelpBtn" title="Help: How to connect & share documents" aria-label="Connection Guide">
                     <i data-lucide="info"></i>
                 </button>
-                <button type="button" class="theme-toggle-btn" id="themeToggleBtn" title="Toggle Light/Dark Theme"
-                    aria-label="Toggle Theme">
+                <button type="button" class="theme-toggle-btn" id="themeToggleBtn" title="Toggle Light/Dark Theme" aria-label="Toggle Theme">
                     <i data-lucide="sun" id="themeToggleIcon"></i>
                 </button>
             </div>
@@ -88,8 +79,7 @@
                                 <button class="icon-btn" id="copyIdBtn" title="Copy ID" aria-label="Copy Connection ID">
                                     <i data-lucide="copy"></i>
                                 </button>
-                                <button type="button" class="icon-btn refresh-btn" id="refreshBtn"
-                                    title="Refresh Connection & ID" aria-label="Refresh Connection">
+                                <button type="button" class="icon-btn refresh-btn" id="refreshBtn" title="Refresh Connection & ID" aria-label="Refresh Connection">
                                     <i data-lucide="rotate-cw" id="refreshIcon"></i>
                                 </button>
                             </div>
@@ -108,48 +98,10 @@
                         <div class="qr-container" id="qrcode"></div>
                         <p class="qr-label" id="qrLabel">Scan this QR code from another device</p>
 
-                        <!-- Quick Share Shortcuts Row -->
-                        <div class="quick-share-row">
-                            <button type="button" class="quick-share-chip" id="btnQuickArchive" title="Instantly browse &amp; share .ZIP or .RAR files">
-                                <i data-lucide="zap"></i>
-                                <span>Quick Share .ZIP / .RAR</span>
-                            </button>
-                            <button type="button" class="quick-share-chip" id="btnZipFolder" title="Pick an entire folder, compress to ZIP and share">
-                                <i data-lucide="folder-archive"></i>
-                                <span>Zip Folder &amp; Share</span>
-                            </button>
-                        </div>
-                        <input type="file" id="archiveFileInput" accept=".zip,.rar,.7z,.tar,.gz,application/zip,application/x-rar-compressed,application/x-zip-compressed,application/octet-stream" hidden multiple>
-                        <input type="file" id="folderInput" webkitdirectory directory hidden multiple>
-
                         <div class="file-drop-zone" id="dropZone">
                             <i data-lucide="file-plus" class="drop-icon"></i>
                             <p>Drag & Drop or <span class="browse-link">Browse</span></p>
-                            <span class="drop-zone-sub">Supports Documents, Media &amp; <strong>.ZIP / .RAR</strong>
-                                Archives</span>
-                            <input type="file" id="fileInput" hidden multiple accept="*/*">
-                        </div>
-
-                        <!-- Archive Quick Action Banner -->
-                        <div id="selectedArchiveBanner" class="archive-action-banner hidden">
-                            <div class="archive-banner-info">
-                                <i data-lucide="archive" class="archive-banner-icon"></i>
-                                <div>
-                                    <strong id="archiveBannerTitle">Archive Selected</strong>
-                                    <p id="archiveBannerDesc">Inspect files or run web applications</p>
-                                </div>
-                            </div>
-                            <div class="archive-banner-actions">
-                                <button type="button" class="action-pill-btn" id="btnInspectSelectedArchive">
-                                    <i data-lucide="folder-search"></i> Inspect
-                                </button>
-                                <button type="button" class="action-pill-btn primary" id="btnRunSelectedArchive">
-                                    <i data-lucide="play"></i> Run App
-                                </button>
-                                <button type="button" class="action-pill-btn" id="btnZipBatchFiles" style="display:none;">
-                                    <i data-lucide="package"></i> Zip All
-                                </button>
-                            </div>
+                            <input type="file" id="fileInput" hidden multiple>
                         </div>
                     </div>
                 </div>
@@ -227,8 +179,7 @@
                                     <span id="overallProgressPercent">0%</span>
                                 </div>
                                 <div class="progress-bar overall-bar">
-                                    <div id="overallProgressBarFill" class="progress-fill overall-fill"
-                                        style="width: 0%"></div>
+                                    <div id="overallProgressBarFill" class="progress-fill overall-fill" style="width: 0%"></div>
                                 </div>
                             </div>
 
@@ -282,8 +233,7 @@
                         <span class="incoming-sub">High-Speed Peer-to-Peer Transfer</span>
                     </div>
                 </div>
-                <p class="modal-desc">A connected peer wants to send you this document. Accept to start fast download.
-                </p>
+                <p class="modal-desc">A connected peer wants to send you this document. Accept to start fast download.</p>
                 <div class="modal-actions">
                     <button id="declineBtn" class="text-btn">Decline</button>
                     <button id="acceptBtn" class="primary-btn">
@@ -302,7 +252,7 @@
                 <h2>Transfer Complete!</h2>
                 <p id="successMsgText">The file has been received and saved successfully.</p>
                 <div id="savedFilesList" class="saved-files-list hidden"></div>
-
+                
                 <div id="transferSummaryBox" class="transfer-summary-box">
                     <div class="summary-metric">
                         <span class="sum-label">Total Transferred</span>
@@ -345,149 +295,15 @@
         </footer>
     </div><!-- Close App-Container -->
 
-    <!-- Modal: Share App / Export Application -->
+    <!-- Modal: Logo QR -->
     <div id="logoQrModal" class="modal hidden">
-        <div class="modal-content share-app-modal-content">
-            <div class="modal-icon-badge">
-                <i data-lucide="share-2" class="modal-icon"></i>
-            </div>
-            <h2>Share &amp; Export Application</h2>
-            <p class="modal-desc">Download standalone offline ZIP or share directly with nearby peers</p>
-
-            <div class="share-app-options">
-                <button type="button" class="share-app-option-card" id="btnExportAppZip">
-                    <div class="option-icon-box">
-                        <i data-lucide="package"></i>
-                    </div>
-                    <div class="option-info">
-                        <strong>Download App (.ZIP)</strong>
-                        <span>Package complete offline source to run anywhere</span>
-                    </div>
-                    <i data-lucide="download" class="option-arrow"></i>
-                </button>
-
-                <button type="button" class="share-app-option-card" id="btnSendAppToPeer">
-                    <div class="option-icon-box">
-                        <i data-lucide="send"></i>
-                    </div>
-                    <div class="option-info">
-                        <strong>Send App to Peer</strong>
-                        <span>Bundle &amp; send app directly over P2P link</span>
-                    </div>
-                    <i data-lucide="arrow-right" class="option-arrow"></i>
-                </button>
-            </div>
-
-            <div class="qr-divider">
-                <span>OR SCAN APP QR CODE</span>
-            </div>
-
-            <div class="qr-container" id="logoQrCodeContainer" style="margin: 10px auto; width: fit-content;"></div>
-            <p class="qr-sub-label">Scan from another mobile or PC to open ShareWith</p>
-
-            <div class="modal-actions" style="justify-content: center; margin-top: 1rem;">
+        <div class="modal-content">
+            <i data-lucide="smartphone" class="modal-icon"></i>
+            <h2>Share App</h2>
+            <p class="modal-desc">Scan to open this app on another device</p>
+            <div class="qr-container" id="logoQrCodeContainer" style="margin: 20px auto; width: fit-content;"></div>
+            <div class="modal-actions" style="justify-content: center;">
                 <button id="closeLogoQrBtn" class="primary-btn">Close</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal: Archive Inspector & Extractor -->
-    <div id="archiveModal" class="modal hidden">
-        <div class="modal-content archive-modal-content">
-            <div class="archive-modal-header">
-                <div class="archive-header-title">
-                    <div class="archive-icon-badge">
-                        <i data-lucide="archive"></i>
-                    </div>
-                    <div>
-                        <h2 id="archiveModalTitle">Archive Inspector</h2>
-                        <p class="modal-desc" id="archiveModalSubtitle">Explore files inside archive</p>
-                    </div>
-                </div>
-                <button class="close-btn" id="closeArchiveBtn" aria-label="Close Archive Inspector">&times;</button>
-            </div>
-
-            <div class="archive-toolbar">
-                <div class="archive-search-wrap">
-                    <i data-lucide="search" class="archive-search-icon"></i>
-                    <input type="text" id="archiveSearchInput" placeholder="Filter files inside archive..."
-                        autocomplete="off">
-                </div>
-                <div class="archive-toolbar-actions">
-                    <button type="button" class="primary-btn btn-sm hidden" id="btnArchiveRunApp">
-                        <i data-lucide="play"></i> Run Web App
-                    </button>
-                    <button type="button" class="secondary-btn btn-sm" id="btnArchiveExtractAll">
-                        <i data-lucide="download"></i> Extract All
-                    </button>
-                </div>
-            </div>
-
-            <div class="archive-files-container">
-                <div class="archive-files-list" id="archiveFilesList">
-                    <!-- Populated dynamically -->
-                </div>
-            </div>
-
-            <div class="archive-modal-footer">
-                <span id="archiveSummaryText" class="archive-summary-text">0 files</span>
-                <button type="button" id="closeArchiveBtn2" class="secondary-btn btn-sm">Close</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal: In-Browser Execution Sandbox Runner -->
-    <div id="archiveRunnerModal" class="modal runner-modal hidden">
-        <div class="runner-modal-content">
-            <div class="runner-header">
-                <div class="runner-title-wrap">
-                    <div class="runner-status-dot"></div>
-                    <i data-lucide="play-circle" class="runner-icon"></i>
-                    <span id="runnerAppTitle" class="runner-app-title">Web Application Runner</span>
-                    <span class="runner-badge">Sandboxed</span>
-                </div>
-                <div class="runner-actions">
-                    <button type="button" class="runner-btn" id="runnerReloadBtn" title="Restart Application">
-                        <i data-lucide="rotate-cw"></i>
-                    </button>
-                    <button type="button" class="runner-btn" id="runnerFullscreenBtn" title="Toggle Fullscreen">
-                        <i data-lucide="maximize"></i>
-                    </button>
-                    <button type="button" class="runner-btn" id="runnerNewTabBtn" title="Open in New Window">
-                        <i data-lucide="external-link"></i>
-                    </button>
-                    <button type="button" class="runner-btn runner-close-btn" id="closeRunnerBtn" title="Close Runner">
-                        &times;
-                    </button>
-                </div>
-            </div>
-            <div class="runner-viewport">
-                <div id="runnerLoader" class="runner-loader hidden">
-                    <div class="runner-spinner"></div>
-                    <p id="runnerLoaderText">Unpacking and launching application...</p>
-                </div>
-                <iframe id="runnerFrame" class="runner-frame"
-                    sandbox="allow-scripts allow-modals allow-same-origin allow-forms allow-popups"
-                    title="Sandboxed App Execution"></iframe>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal: Archive File Preview -->
-    <div id="archivePreviewModal" class="modal hidden">
-        <div class="modal-content preview-modal-content">
-            <div class="preview-modal-header">
-                <h3 id="previewFileTitle">Preview</h3>
-                <button class="close-btn" id="closePreviewBtn">&times;</button>
-            </div>
-            <div class="preview-body" id="previewBody">
-                <!-- Image / Video / Text rendered here -->
-            </div>
-            <div class="modal-actions" style="justify-content: flex-end; margin-top: 1rem;">
-                <button type="button" id="previewDownloadBtn" class="primary-btn btn-sm">
-                    <i data-lucide="download"></i> Download File
-                </button>
-                <button type="button" id="closePreviewBtn2" class="secondary-btn btn-sm">Close</button>
             </div>
         </div>
     </div>
@@ -525,9 +341,7 @@
 
             <div class="help-modal-body">
                 <div class="help-intro-box">
-                    <p><strong>Share With</strong> lets you send documents, photos, and files of any size directly
-                        peer-to-peer with end-to-end encryption. Select an optimization mode below to connect either
-                        online or completely offline:</p>
+                    <p><strong>Share With</strong> lets you send documents, photos, and files of any size directly peer-to-peer with end-to-end encryption. Select an optimization mode below to connect either online or completely offline:</p>
                 </div>
 
                 <div class="help-options-grid">
@@ -544,13 +358,10 @@
                             <span class="badge badge-auto">Online & Offline</span>
                         </div>
                         <p class="option-desc">
-                            Intelligent auto-routing. Detects whether devices are on the same local network or across
-                            the internet, automatically selecting the lowest-latency direct P2P data channel with zero
-                            configuration.
+                            Intelligent auto-routing. Detects whether devices are on the same local network or across the internet, automatically selecting the lowest-latency direct P2P data channel with zero configuration.
                         </p>
                         <div class="option-instruction">
-                            <strong>How to connect:</strong> Share your 6-digit Connection ID or scan the QR code. The
-                            app automatically chooses the best direct route.
+                            <strong>How to connect:</strong> Share your 6-digit Connection ID or scan the QR code. The app automatically chooses the best direct route.
                         </div>
                         <button type="button" class="option-select-btn" data-method-target="Smart Connect">
                             <i data-lucide="check"></i> <span>Activate Smart Connect</span>
@@ -570,12 +381,10 @@
                             <span class="badge badge-offline">Offline LAN</span>
                         </div>
                         <p class="option-desc">
-                            Connects devices on the same Wi-Fi network or portable Mobile Hotspot. Transfers documents
-                            directly over the local network at maximum hardware speed (50–100+ MB/s).
+                            Connects devices on the same Wi-Fi network or portable Mobile Hotspot. Transfers documents directly over the local network at maximum hardware speed (50–100+ MB/s).
                         </p>
                         <div class="option-instruction">
-                            <strong>How to connect offline:</strong> Turn on Mobile Hotspot on Device A, connect Device
-                            B to it, and open the app. No internet data quota is consumed!
+                            <strong>How to connect offline:</strong> Turn on Mobile Hotspot on Device A, connect Device B to it, and open the app. No internet data quota is consumed!
                         </div>
                         <button type="button" class="option-select-btn" data-method-target="Local Wi-Fi">
                             <i data-lucide="check"></i> <span>Activate Local Wi-Fi</span>
@@ -595,12 +404,10 @@
                             <span class="badge badge-offline">100% Offline</span>
                         </div>
                         <p class="option-desc">
-                            Short-range proximity direct connection. Designed for quick off-grid transfers when no Wi-Fi
-                            router, cables, or cellular networks are available.
+                            Short-range proximity direct connection. Designed for quick off-grid transfers when no Wi-Fi router, cables, or cellular networks are available.
                         </p>
                         <div class="option-instruction">
-                            <strong>How to connect offline:</strong> Keep both devices within 10 meters, scan the
-                            receiver's QR code or pair peer IDs for quick off-grid handshakes.
+                            <strong>How to connect offline:</strong> Keep both devices within 10 meters, scan the receiver's QR code or pair peer IDs for quick off-grid handshakes.
                         </div>
                         <button type="button" class="option-select-btn" data-method-target="Bluetooth">
                             <i data-lucide="check"></i> <span>Activate Bluetooth</span>
@@ -620,12 +427,10 @@
                             <span class="badge badge-online">Worldwide Online</span>
                         </div>
                         <p class="option-desc">
-                            Connect across different cities, ISPs, or 4G/5G mobile carriers worldwide. WebRTC STUN/TURN
-                            traversal securely tunnels through firewalls and NATs.
+                            Connect across different cities, ISPs, or 4G/5G mobile carriers worldwide. WebRTC STUN/TURN traversal securely tunnels through firewalls and NATs.
                         </p>
                         <div class="option-instruction">
-                            <strong>How to connect online:</strong> Send your share link or 6-digit ID via chat or
-                            email. The recipient connects instantly from anywhere on Earth.
+                            <strong>How to connect online:</strong> Send your share link or 6-digit ID via chat or email. The recipient connects instantly from anywhere on Earth.
                         </div>
                         <button type="button" class="option-select-btn" data-method-target="Global Link">
                             <i data-lucide="check"></i> <span>Activate Global Link</span>
@@ -638,8 +443,7 @@
                     <div class="steps-row">
                         <div class="step-item">
                             <div class="step-num">1</div>
-                            <div class="step-text"><strong>Choose Files:</strong> Drop documents or browse on the Send
-                                tab.</div>
+                            <div class="step-text"><strong>Choose Files:</strong> Drop documents or browse on the Send tab.</div>
                         </div>
                         <div class="step-item">
                             <div class="step-num">2</div>
@@ -647,8 +451,7 @@
                         </div>
                         <div class="step-item">
                             <div class="step-num">3</div>
-                            <div class="step-text"><strong>Transfer:</strong> Receiver clicks Accept. Done in seconds!
-                            </div>
+                            <div class="step-text"><strong>Transfer:</strong> Receiver clicks Accept. Done in seconds!</div>
                         </div>
                     </div>
                 </div>
@@ -658,8 +461,6 @@
                 <button id="closeHelpGuideBtn2" class="primary-btn">Got It</button>
             </div>
         </div>
-    </div>
-
     <!-- First-Time Welcome Onboarding Notification -->
     <div id="welcomeNotification" class="welcome-notification hidden" role="region" aria-label="Welcome notification">
         <div class="welcome-header">
@@ -669,11 +470,9 @@
                 </div>
                 <strong>Welcome to Share With!</strong>
             </div>
-            <button type="button" class="welcome-close-btn" id="closeWelcomeBtn"
-                aria-label="Close Welcome">&times;</button>
+            <button type="button" class="welcome-close-btn" id="closeWelcomeBtn" aria-label="Close Welcome">&times;</button>
         </div>
-        <p class="welcome-desc">Direct P2P file sharing with end-to-end encryption. No file size limits and zero cloud
-            storage.</p>
+        <p class="welcome-desc">Direct P2P file sharing with end-to-end encryption. No file size limits and zero cloud storage.</p>
         <div class="welcome-actions">
             <button type="button" id="welcomeGuideBtn" class="welcome-btn welcome-guide-btn">
                 <i data-lucide="book-open"></i> Quick Guide
