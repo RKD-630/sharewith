@@ -1738,3 +1738,666 @@ footer {
     font-weight: bold;
     flex-shrink: 0;
 }
+
+/* ============================================================
+   NEW FEATURES: SHARE APP & ARCHIVE (.ZIP/.RAR) RUNNER STYLES
+   ============================================================ */
+
+/* Nav Share App Button */
+.nav-share-app-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.3rem 0.65rem;
+    border-radius: 9999px;
+    background: rgba(99, 102, 241, 0.15);
+    border: 1px solid rgba(99, 102, 241, 0.35);
+    color: var(--primary);
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+    margin-left: 0.4rem;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    outline: none;
+    flex-shrink: 0;
+}
+
+.nav-share-app-btn svg,
+.nav-share-app-btn i {
+    width: 13px;
+    height: 13px;
+}
+
+.nav-share-app-btn:hover {
+    background: var(--primary);
+    color: #ffffff;
+    border-color: var(--primary);
+    transform: translateY(-1px);
+    box-shadow: 0 0 12px rgba(99, 102, 241, 0.5);
+}
+
+@media (max-width: 640px) {
+    .nav-share-app-btn span {
+        display: none;
+    }
+    .nav-share-app-btn {
+        padding: 0.35rem;
+        border-radius: 50%;
+        width: 24px;
+        height: 24px;
+        justify-content: center;
+    }
+}
+
+/* Drop Zone Subtext */
+.drop-zone-sub {
+    display: block;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin-top: 0.35rem;
+}
+
+.drop-zone-sub strong {
+    color: var(--primary);
+}
+
+/* Selected Archive Action Banner (Send Tab) */
+.archive-action-banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-top: 1rem;
+    padding: 0.85rem 1.1rem;
+    background: rgba(99, 102, 241, 0.1);
+    border: 1px solid rgba(99, 102, 241, 0.3);
+    border-radius: 1rem;
+    animation: fadeIn 0.3s ease-out;
+}
+
+.archive-banner-info {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.archive-banner-icon {
+    width: 28px;
+    height: 28px;
+    color: var(--primary);
+    flex-shrink: 0;
+}
+
+.archive-banner-info strong {
+    display: block;
+    font-size: 0.9rem;
+    color: var(--text);
+}
+
+.archive-banner-info p {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin: 0;
+}
+
+.archive-banner-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-shrink: 0;
+}
+
+/* Action Pill Buttons */
+.action-pill-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.4rem 0.8rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    border: 1px solid var(--border);
+    background: var(--card-bg-solid);
+    color: var(--text);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.action-pill-btn svg,
+.action-pill-btn i {
+    width: 14px;
+    height: 14px;
+}
+
+.action-pill-btn:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+    transform: translateY(-1px);
+}
+
+.action-pill-btn.primary {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: #ffffff;
+}
+
+.action-pill-btn.primary:hover {
+    background: var(--primary-dark);
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+}
+
+/* Small Button Modifier */
+.btn-sm {
+    padding: 0.45rem 0.85rem;
+    font-size: 0.8rem;
+    border-radius: 0.75rem;
+}
+
+/* Share App Modal Options */
+.share-app-modal-content {
+    max-width: 480px;
+}
+
+.share-app-options {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    margin: 1.25rem 0;
+}
+
+.share-app-option-card {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.9rem 1.1rem;
+    background: var(--pill-bg);
+    border: 1px solid var(--border);
+    border-radius: 1rem;
+    color: var(--text);
+    text-align: left;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    width: 100%;
+}
+
+.share-app-option-card:hover {
+    background: rgba(99, 102, 241, 0.12);
+    border-color: var(--primary);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(99, 102, 241, 0.15);
+}
+
+.share-app-option-card .option-icon-box {
+    width: 40px;
+    height: 40px;
+    border-radius: 0.75rem;
+    background: rgba(99, 102, 241, 0.15);
+    color: var(--primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.share-app-option-card .option-icon-box svg,
+.share-app-option-card .option-icon-box i {
+    width: 20px;
+    height: 20px;
+}
+
+.share-app-option-card .option-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.share-app-option-card .option-info strong {
+    display: block;
+    font-size: 0.9rem;
+    color: var(--text);
+}
+
+.share-app-option-card .option-info span {
+    display: block;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin-top: 0.15rem;
+}
+
+.share-app-option-card .option-arrow {
+    width: 18px;
+    height: 18px;
+    color: var(--text-muted);
+    transition: transform 0.2s ease;
+}
+
+.share-app-option-card:hover .option-arrow {
+    color: var(--primary);
+    transform: translateX(3px);
+}
+
+.qr-divider {
+    display: flex;
+    align-items: center;
+    text-align: center;
+    margin: 1.25rem 0 0.85rem;
+    color: var(--text-muted);
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+}
+
+.qr-divider::before,
+.qr-divider::after {
+    content: '';
+    flex: 1;
+    border-bottom: 1px solid var(--border);
+}
+
+.qr-divider span {
+    padding: 0 0.75rem;
+}
+
+.qr-sub-label {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    text-align: center;
+    margin-top: 0.35rem;
+}
+
+/* ============================================================
+   ARCHIVE INSPECTOR MODAL
+   ============================================================ */
+.archive-modal-content {
+    max-width: 680px;
+    width: 95%;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.archive-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+}
+
+.archive-header-title {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+}
+
+.archive-icon-badge {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    background: rgba(99, 102, 241, 0.15);
+    color: var(--primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.archive-icon-badge svg,
+.archive-icon-badge i {
+    width: 24px;
+    height: 24px;
+}
+
+.archive-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-bottom: 0.85rem;
+    flex-wrap: wrap;
+}
+
+.archive-search-wrap {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: var(--input-bg);
+    border: 1px solid var(--border);
+    border-radius: 0.75rem;
+    padding: 0.45rem 0.85rem;
+    flex: 1;
+    min-width: 200px;
+}
+
+.archive-search-icon {
+    width: 16px;
+    height: 16px;
+    color: var(--text-muted);
+    flex-shrink: 0;
+}
+
+.archive-search-wrap input {
+    background: transparent;
+    border: none;
+    color: var(--text);
+    font-size: 0.85rem;
+    width: 100%;
+    outline: none;
+}
+
+.archive-toolbar-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.archive-files-container {
+    flex: 1;
+    min-height: 220px;
+    max-height: 45vh;
+    overflow-y: auto;
+    background: var(--input-bg);
+    border: 1px solid var(--border);
+    border-radius: 0.85rem;
+    padding: 0.5rem;
+}
+
+.archive-files-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+
+.archive-file-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.55rem 0.75rem;
+    border-radius: 0.65rem;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid transparent;
+    transition: all 0.15s ease;
+    font-size: 0.82rem;
+}
+
+.archive-file-row:hover {
+    background: rgba(99, 102, 241, 0.08);
+    border-color: rgba(99, 102, 241, 0.2);
+}
+
+.archive-file-row.is-dir {
+    opacity: 0.7;
+}
+
+.archive-file-left {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    min-width: 0;
+    flex: 1;
+}
+
+.archive-file-left svg,
+.archive-file-left i {
+    width: 16px;
+    height: 16px;
+    color: var(--primary);
+    flex-shrink: 0;
+}
+
+.archive-file-name {
+    color: var(--text);
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.archive-file-right {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    flex-shrink: 0;
+}
+
+.archive-file-size {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+.archive-row-btn {
+    padding: 0.25rem 0.55rem;
+    border-radius: 0.5rem;
+    border: 1px solid var(--border);
+    background: var(--card-bg-solid);
+    color: var(--text);
+    font-size: 0.72rem;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    transition: all 0.15s ease;
+}
+
+.archive-row-btn:hover {
+    background: var(--primary);
+    color: #fff;
+    border-color: var(--primary);
+}
+
+.archive-row-btn.run-btn {
+    background: rgba(16, 185, 129, 0.15);
+    border-color: rgba(16, 185, 129, 0.4);
+    color: var(--accent);
+}
+
+.archive-row-btn.run-btn:hover {
+    background: var(--accent);
+    color: #fff;
+}
+
+.archive-modal-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 1rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--border);
+}
+
+.archive-summary-text {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
+/* ============================================================
+   IN-BROWSER EXECUTION SANDBOX RUNNER MODAL
+   ============================================================ */
+.runner-modal {
+    z-index: 1000;
+}
+
+.runner-modal-content {
+    width: 95vw;
+    max-width: 1100px;
+    height: 88vh;
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+    overflow: hidden;
+    border-radius: 1.25rem;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7);
+}
+
+.runner-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem 1.25rem;
+    background: var(--card-bg-solid);
+    border-bottom: 1px solid var(--border);
+}
+
+.runner-title-wrap {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+}
+
+.runner-status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 8px var(--accent);
+}
+
+.runner-icon {
+    width: 20px;
+    height: 20px;
+    color: var(--primary);
+}
+
+.runner-app-title {
+    font-weight: 700;
+    font-size: 0.95rem;
+    color: var(--text);
+    max-width: 350px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.runner-badge {
+    font-size: 0.65rem;
+    font-weight: 700;
+    padding: 0.15rem 0.5rem;
+    border-radius: 9999px;
+    background: rgba(16, 185, 129, 0.15);
+    color: var(--accent);
+    border: 1px solid rgba(16, 185, 129, 0.3);
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+.runner-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.runner-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 0.5rem;
+    background: var(--input-bg);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.runner-btn svg,
+.runner-btn i {
+    width: 15px;
+    height: 15px;
+}
+
+.runner-btn:hover {
+    background: var(--primary);
+    color: #fff;
+    border-color: var(--primary);
+}
+
+.runner-btn.runner-close-btn {
+    font-size: 1.25rem;
+    line-height: 1;
+}
+
+.runner-btn.runner-close-btn:hover {
+    background: #ef4444;
+    border-color: #ef4444;
+}
+
+.runner-viewport {
+    position: relative;
+    flex: 1;
+    width: 100%;
+    height: 100%;
+    background: #ffffff;
+}
+
+.runner-frame {
+    width: 100%;
+    height: 100%;
+    border: none;
+    display: block;
+}
+
+.runner-loader {
+    position: absolute;
+    inset: 0;
+    background: var(--modal-bg);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    z-index: 10;
+}
+
+.runner-spinner {
+    width: 44px;
+    height: 44px;
+    border: 3px solid rgba(99, 102, 241, 0.2);
+    border-top-color: var(--primary);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+/* Preview Modal */
+.preview-modal-content {
+    max-width: 600px;
+    width: 90%;
+}
+
+.preview-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+}
+
+.preview-body {
+    max-height: 60vh;
+    overflow: auto;
+    border-radius: 0.75rem;
+    background: var(--input-bg);
+    border: 1px solid var(--border);
+    padding: 1rem;
+    text-align: center;
+}
+
+.preview-body img,
+.preview-body video {
+    max-width: 100%;
+    max-height: 50vh;
+    border-radius: 0.5rem;
+    display: inline-block;
+}
+
+.preview-body pre {
+    text-align: left;
+    white-space: pre-wrap;
+    word-break: break-all;
+    font-family: monospace;
+    font-size: 0.8rem;
+    color: var(--text);
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+

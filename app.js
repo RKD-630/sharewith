@@ -700,6 +700,9 @@ function prepareToSendBatch(files) {
         lucide.createIcons();
     }
 
+    // Check if an archive (.zip or .rar) is among the selected files
+    checkSelectedArchiveBanner(files);
+
     const targetId = targetIdInput.value.trim().toUpperCase();
     if (targetId) {
         initiateSend(targetId);
@@ -1060,6 +1063,34 @@ function showSuccess(msg, showDownload = false, totalBytes = 0, avgSpeed = 0, du
                 sizeSpan.textContent = formatBytes(item.size || 0);
                 right.appendChild(sizeSpan);
 
+                // Add Archive action buttons if received file is a ZIP or RAR
+                const ext = (item.name || '').split('.').pop().toLowerCase();
+                if (['zip', 'rar'].includes(ext)) {
+                    const inspectBtn = document.createElement('button');
+                    inspectBtn.type = 'button';
+                    inspectBtn.className = 'action-pill-btn';
+                    inspectBtn.innerHTML = '<i data-lucide="archive"></i> Inspect';
+                    inspectBtn.title = 'Inspect and extract files inside archive';
+                    inspectBtn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        openArchiveInspector(item.blob, item.name);
+                    });
+                    right.appendChild(inspectBtn);
+
+                    if (ext === 'zip') {
+                        const runBtn = document.createElement('button');
+                        runBtn.type = 'button';
+                        runBtn.className = 'action-pill-btn primary';
+                        runBtn.innerHTML = '<i data-lucide="play"></i> Run';
+                        runBtn.title = 'Execute web application in sandboxed runner';
+                        runBtn.addEventListener('click', (e) => {
+                            e.stopPropagation();
+                            launchArchiveRunner(item.blob, item.name);
+                        });
+                        right.appendChild(runBtn);
+                    }
+                }
+
                 row.appendChild(left);
                 row.appendChild(right);
                 savedFilesList.appendChild(row);
@@ -1402,6 +1433,738 @@ checkFirstTimeWelcome();
 
 // Initial Start
 initPeer();
+
+// ============================================================
+// NEW FEATURES: ARCHIVE (.ZIP / .RAR) INSPECTOR, RUNNER & APP SHARING
+// ============================================================
+
+let currentArchiveData = null;
+let currentArchiveBlob = null;
+let currentArchiveName = '';
+let activeRunnerBlobUrls = [];
+let selectedArchiveFile = null;
+
+// DOM Elements for Archive Features
+const selectedArchiveBanner = document.getElementById('selectedArchiveBanner');
+const archiveBannerTitle = document.getElementById('archiveBannerTitle');
+const archiveBannerDesc = document.getElementById('archiveBannerDesc');
+const btnInspectSelectedArchive = document.getElementById('btnInspectSelectedArchive');
+const btnRunSelectedArchive = document.getElementById('btnRunSelectedArchive');
+
+const archiveModal = document.getElementById('archiveModal');
+const archiveModalTitle = document.getElementById('archiveModalTitle');
+const archiveModalSubtitle = document.getElementById('archiveModalSubtitle');
+const closeArchiveBtn = document.getElementById('closeArchiveBtn');
+const closeArchiveBtn2 = document.getElementById('closeArchiveBtn2');
+const archiveSearchInput = document.getElementById('archiveSearchInput');
+const archiveFilesList = document.getElementById('archiveFilesList');
+const archiveSummaryText = document.getElementById('archiveSummaryText');
+const btnArchiveRunApp = document.getElementById('btnArchiveRunApp');
+const btnArchiveExtractAll = document.getElementById('btnArchiveExtractAll');
+
+const archiveRunnerModal = document.getElementById('archiveRunnerModal');
+const runnerAppTitle = document.getElementById('runnerAppTitle');
+const runnerFrame = document.getElementById('runnerFrame');
+const runnerLoader = document.getElementById('runnerLoader');
+const runnerLoaderText = document.getElementById('runnerLoaderText');
+const runnerReloadBtn = document.getElementById('runnerReloadBtn');
+const runnerFullscreenBtn = document.getElementById('runnerFullscreenBtn');
+const runnerNewTabBtn = document.getElementById('runnerNewTabBtn');
+const closeRunnerBtn = document.getElementById('closeRunnerBtn');
+
+const archivePreviewModal = document.getElementById('archivePreviewModal');
+const previewFileTitle = document.getElementById('previewFileTitle');
+const previewBody = document.getElementById('previewBody');
+const previewDownloadBtn = document.getElementById('previewDownloadBtn');
+const closePreviewBtn = document.getElementById('closePreviewBtn');
+const closePreviewBtn2 = document.getElementById('closePreviewBtn2');
+
+const navShareAppBtn = document.getElementById('navShareAppBtn');
+const btnExportAppZip = document.getElementById('btnExportAppZip');
+const btnSendAppToPeer = document.getElementById('btnSendAppToPeer');
+
+// Helper: Check if archive file is selected in Send Tab
+function checkSelectedArchiveBanner(files) {
+    if (!selectedArchiveBanner) return;
+    const archive = files.find(f => {
+        const ext = (f.name || '').split('.').pop().toLowerCase();
+        return ['zip', 'rar'].includes(ext);
+    });
+
+    if (archive) {
+        selectedArchiveFile = archive;
+        selectedArchiveBanner.classList.remove('hidden');
+        if (archiveBannerTitle) archiveBannerTitle.textContent = `Archive: ${archive.name}`;
+        if (archiveBannerDesc) archiveBannerDesc.textContent = `${formatBytes(archive.size)} • Click Inspect or Run to explore`;
+        
+        // Check if zip contains web app HTML
+        if (archive.name.toLowerCase().endsWith('.zip') && window.JSZip) {
+            JSZip.loadAsync(archive).then(zip => {
+                const hasHtml = Object.keys(zip.files).some(p => p.toLowerCase().endsWith('.html') || p.toLowerCase().endsWith('.htm'));
+                if (btnRunSelectedArchive) {
+                    btnRunSelectedArchive.classList.toggle('hidden', !hasHtml);
+                }
+            }).catch(() => {
+                if (btnRunSelectedArchive) btnRunSelectedArchive.classList.add('hidden');
+            });
+        } else if (btnRunSelectedArchive) {
+            btnRunSelectedArchive.classList.add('hidden');
+        }
+        lucide.createIcons();
+    } else {
+        selectedArchiveFile = null;
+        selectedArchiveBanner.classList.add('hidden');
+    }
+}
+
+if (btnInspectSelectedArchive) {
+    btnInspectSelectedArchive.addEventListener('click', () => {
+        if (selectedArchiveFile) {
+            openArchiveInspector(selectedArchiveFile, selectedArchiveFile.name);
+        }
+    });
+}
+
+if (btnRunSelectedArchive) {
+    btnRunSelectedArchive.addEventListener('click', () => {
+        if (selectedArchiveFile) {
+            launchArchiveRunner(selectedArchiveFile, selectedArchiveFile.name);
+        }
+    });
+}
+
+// MIME Type Helper for extracted assets
+function getMimeType(filePath) {
+    const ext = (filePath || '').split('.').pop().toLowerCase();
+    const map = {
+        'html': 'text/html',
+        'htm': 'text/html',
+        'js': 'text/javascript',
+        'mjs': 'text/javascript',
+        'css': 'text/css',
+        'json': 'application/json',
+        'png': 'image/png',
+        'jpg': 'image/jpeg',
+        'jpeg': 'image/jpeg',
+        'gif': 'image/gif',
+        'svg': 'image/svg+xml',
+        'webp': 'image/webp',
+        'ico': 'image/x-icon',
+        'txt': 'text/plain',
+        'md': 'text/markdown',
+        'mp3': 'audio/mpeg',
+        'wav': 'audio/wav',
+        'ogg': 'audio/ogg',
+        'mp4': 'video/mp4',
+        'webm': 'video/webm',
+        'pdf': 'application/pdf',
+        'woff': 'font/woff',
+        'woff2': 'font/woff2',
+        'ttf': 'font/ttf'
+    };
+    return map[ext] || 'application/octet-stream';
+}
+
+// Pure JS Parser for RAR v4 / v5 Header Inspection
+async function parseRarHeader(fileOrBlob) {
+    const buffer = await fileOrBlob.slice(0, Math.min(fileOrBlob.size, 1024 * 1024 * 4)).arrayBuffer();
+    const bytes = new Uint8Array(buffer);
+    const entries = [];
+
+    // Signature check
+    // RAR v4: 0x52 0x61 0x72 0x21 0x1A 0x07 0x00
+    // RAR v5: 0x52 0x61 0x72 0x21 0x1A 0x07 0x01 0x00
+    const isRar4 = bytes[0] === 0x52 && bytes[1] === 0x61 && bytes[2] === 0x72 && bytes[3] === 0x21 && bytes[4] === 0x1A && bytes[5] === 0x07 && bytes[6] === 0x00;
+    const isRar5 = bytes[0] === 0x52 && bytes[1] === 0x61 && bytes[2] === 0x72 && bytes[3] === 0x21 && bytes[4] === 0x1A && bytes[5] === 0x07 && bytes[6] === 0x01 && bytes[7] === 0x00;
+
+    if (!isRar4 && !isRar5) {
+        throw new Error('Not a valid RAR archive signature.');
+    }
+
+    if (isRar4) {
+        let pos = 7;
+        const view = new DataView(buffer);
+        while (pos < bytes.length - 7) {
+            const headType = view.getUint8(pos + 2);
+            const headFlags = view.getUint16(pos + 3, true);
+            let headSize = view.getUint16(pos + 5, true);
+
+            if (headFlags & 0x8000) {
+                // Add size
+                if (pos + 11 <= bytes.length) {
+                    const addSize = view.getUint32(pos + 7, true);
+                    headSize += addSize;
+                }
+            }
+
+            if (headType === 0x74 && pos + 32 <= bytes.length) {
+                // FILE_HEAD
+                const packSize = view.getUint32(pos + 7, true);
+                const unpSize = view.getUint32(pos + 11, true);
+                const nameSize = view.getUint16(pos + 26, true);
+                let name = '';
+                if (pos + 32 + nameSize <= bytes.length) {
+                    const nameBytes = bytes.subarray(pos + 32, pos + 32 + nameSize);
+                    name = new TextDecoder('utf-8').decode(nameBytes);
+                }
+                if (name) {
+                    entries.push({
+                        path: name,
+                        name: name.split('/').pop() || name,
+                        dir: (headFlags & 0x00E0) === 0x00E0,
+                        size: unpSize,
+                        compressedSize: packSize,
+                        isRar: true
+                    });
+                }
+                pos += headSize + packSize;
+            } else {
+                if (headSize <= 0) break;
+                pos += headSize;
+            }
+        }
+    }
+
+    // If no entries extracted via header parse, return informative fallback entry
+    if (entries.length === 0) {
+        entries.push({
+            path: fileOrBlob.name || 'archive_contents.rar',
+            name: fileOrBlob.name || 'archive_contents.rar',
+            dir: false,
+            size: fileOrBlob.size,
+            compressedSize: fileOrBlob.size,
+            isRar: true
+        });
+    }
+
+    return { type: 'rar', entries };
+}
+
+// Master Archive Parser (Handles .zip and .rar)
+async function parseArchive(fileOrBlob, fileName) {
+    const ext = (fileName || fileOrBlob.name || '').split('.').pop().toLowerCase();
+
+    if (ext === 'zip') {
+        if (!window.JSZip) {
+            throw new Error('JSZip library is initializing. Please try again in a moment.');
+        }
+        const zip = await JSZip.loadAsync(fileOrBlob);
+        const entries = [];
+        zip.forEach((relativePath, zipEntry) => {
+            entries.push({
+                path: relativePath,
+                name: relativePath.split('/').filter(Boolean).pop() || relativePath,
+                dir: zipEntry.dir,
+                size: zipEntry._data ? (zipEntry._data.uncompressedSize || 0) : 0,
+                entry: zipEntry,
+                isZip: true
+            });
+        });
+        return { type: 'zip', zipInstance: zip, entries };
+    } else if (ext === 'rar') {
+        return await parseRarHeader(fileOrBlob);
+    } else {
+        throw new Error('Unsupported archive type. Only .zip and .rar are supported.');
+    }
+}
+
+// Open Archive Inspector Modal
+async function openArchiveInspector(fileOrBlob, fileName) {
+    if (!archiveModal) return;
+    currentArchiveBlob = fileOrBlob;
+    currentArchiveName = fileName || fileOrBlob.name || 'archive.zip';
+
+    if (archiveModalTitle) archiveModalTitle.textContent = currentArchiveName;
+    if (archiveModalSubtitle) archiveModalSubtitle.textContent = 'Reading archive contents...';
+    if (archiveFilesList) archiveFilesList.innerHTML = '<div style="padding: 1.5rem; text-align: center; color: var(--text-muted);">Scanning files...</div>';
+
+    archiveModal.classList.remove('hidden');
+
+    try {
+        const parsed = await parseArchive(fileOrBlob, currentArchiveName);
+        currentArchiveData = parsed;
+        renderArchiveFilesList(parsed.entries);
+
+        // Check if there is an HTML app to run
+        const htmlEntry = parsed.entries.find(e => !e.dir && (e.path.toLowerCase().endsWith('.html') || e.path.toLowerCase().endsWith('.htm')));
+        if (btnArchiveRunApp) {
+            btnArchiveRunApp.classList.toggle('hidden', !htmlEntry || parsed.type !== 'zip');
+            if (htmlEntry) {
+                btnArchiveRunApp.onclick = () => launchArchiveRunner(fileOrBlob, currentArchiveName, htmlEntry.path);
+            }
+        }
+        if (archiveModalSubtitle) {
+            archiveModalSubtitle.textContent = `${parsed.type.toUpperCase()} Archive • ${formatBytes(fileOrBlob.size)}`;
+        }
+    } catch (err) {
+        console.error('Archive parse error:', err);
+        if (archiveFilesList) {
+            archiveFilesList.innerHTML = `<div style="padding: 1.5rem; text-align: center; color: #ef4444;">Unable to inspect archive: ${err.message}</div>`;
+        }
+        showToast(err.message, 'error');
+    }
+}
+
+// Render files inside Archive Inspector table
+function renderArchiveFilesList(entries, filterText = '') {
+    if (!archiveFilesList) return;
+    archiveFilesList.innerHTML = '';
+
+    const q = filterText.toLowerCase().trim();
+    const filtered = entries.filter(e => !q || e.path.toLowerCase().includes(q));
+
+    if (filtered.length === 0) {
+        archiveFilesList.innerHTML = '<div style="padding: 1.5rem; text-align: center; color: var(--text-muted);">No matching files found inside archive.</div>';
+        if (archiveSummaryText) archiveSummaryText.textContent = `0 of ${entries.length} files`;
+        return;
+    }
+
+    filtered.forEach(item => {
+        const row = document.createElement('div');
+        row.className = `archive-file-row ${item.dir ? 'is-dir' : ''}`;
+
+        const left = document.createElement('div');
+        left.className = 'archive-file-left';
+
+        const icon = document.createElement('i');
+        icon.setAttribute('data-lucide', item.dir ? 'folder' : getFileIcon(item.name));
+
+        const nameSpan = document.createElement('span');
+        nameSpan.className = 'archive-file-name';
+        nameSpan.textContent = item.path;
+        nameSpan.title = item.path;
+
+        left.appendChild(icon);
+        left.appendChild(nameSpan);
+
+        const right = document.createElement('div');
+        right.className = 'archive-file-right';
+
+        if (!item.dir && item.size >= 0) {
+            const sizeSpan = document.createElement('span');
+            sizeSpan.className = 'archive-file-size';
+            sizeSpan.textContent = formatBytes(item.size);
+            right.appendChild(sizeSpan);
+        }
+
+        // Action buttons
+        if (!item.dir && item.isZip && currentArchiveData?.zipInstance) {
+            const ext = item.name.split('.').pop().toLowerCase();
+
+            // Preview button for media & text
+            if (['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp', 'txt', 'md', 'json', 'js', 'css', 'mp3', 'wav', 'mp4'].includes(ext)) {
+                const prevBtn = document.createElement('button');
+                prevBtn.type = 'button';
+                prevBtn.className = 'archive-row-btn';
+                prevBtn.innerHTML = '<i data-lucide="eye"></i> Preview';
+                prevBtn.addEventListener('click', () => previewArchiveEntry(item));
+                right.appendChild(prevBtn);
+            }
+
+            // Run button for HTML web applications
+            if (['html', 'htm'].includes(ext)) {
+                const runBtn = document.createElement('button');
+                runBtn.type = 'button';
+                runBtn.className = 'archive-row-btn run-btn';
+                runBtn.innerHTML = '<i data-lucide="play"></i> Run';
+                runBtn.addEventListener('click', () => {
+                    launchArchiveRunner(currentArchiveBlob, currentArchiveName, item.path);
+                });
+                right.appendChild(runBtn);
+            }
+
+            // Extract single file button
+            const dlBtn = document.createElement('button');
+            dlBtn.type = 'button';
+            dlBtn.className = 'archive-row-btn';
+            dlBtn.innerHTML = '<i data-lucide="download"></i>';
+            dlBtn.title = 'Extract & Download this file';
+            dlBtn.addEventListener('click', () => extractSingleZipEntry(item));
+            right.appendChild(dlBtn);
+        } else if (!item.dir && item.isRar) {
+            const dlBtn = document.createElement('button');
+            dlBtn.type = 'button';
+            dlBtn.className = 'archive-row-btn';
+            dlBtn.innerHTML = '<i data-lucide="download"></i> Save Archive';
+            dlBtn.addEventListener('click', () => {
+                const url = URL.createObjectURL(currentArchiveBlob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = currentArchiveName;
+                a.click();
+                setTimeout(() => URL.revokeObjectURL(url), 10000);
+            });
+            right.appendChild(dlBtn);
+        }
+
+        row.appendChild(left);
+        row.appendChild(right);
+        archiveFilesList.appendChild(row);
+    });
+
+    if (archiveSummaryText) {
+        const totalSize = entries.reduce((acc, e) => acc + (e.size || 0), 0);
+        archiveSummaryText.textContent = `${entries.length} items (${formatBytes(totalSize)} uncompressed)`;
+    }
+
+    lucide.createIcons();
+}
+
+// Search Filter inside Archive Inspector
+if (archiveSearchInput) {
+    archiveSearchInput.addEventListener('input', (e) => {
+        if (currentArchiveData?.entries) {
+            renderArchiveFilesList(currentArchiveData.entries, e.target.value);
+        }
+    });
+}
+
+// Extract single file from ZIP
+async function extractSingleZipEntry(item) {
+    try {
+        const blob = await item.entry.async('blob');
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = item.name;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(url), 20000);
+        showToast(`Extracted: ${item.name}`);
+    } catch (err) {
+        showToast(`Failed to extract ${item.name}`, 'error');
+    }
+}
+
+// Extract all files from ZIP archive
+if (btnArchiveExtractAll) {
+    btnArchiveExtractAll.addEventListener('click', async () => {
+        if (!currentArchiveData || !currentArchiveData.zipInstance) {
+            // If RAR or raw archive, trigger standard download
+            if (currentArchiveBlob) {
+                const url = URL.createObjectURL(currentArchiveBlob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = currentArchiveName;
+                a.click();
+                setTimeout(() => URL.revokeObjectURL(url), 10000);
+                showToast(`Downloaded: ${currentArchiveName}`);
+            }
+            return;
+        }
+
+        const entries = currentArchiveData.entries.filter(e => !e.dir);
+        let extractedCount = 0;
+        showToast(`Extracting ${entries.length} files...`);
+
+        for (const item of entries) {
+            try {
+                const blob = await item.entry.async('blob');
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = item.name;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                setTimeout(() => URL.revokeObjectURL(url), 25000);
+                extractedCount++;
+            } catch (e) {
+                console.error('Error extracting item:', item.path, e);
+            }
+        }
+        showToast(`Extracted ${extractedCount} files successfully!`);
+    });
+}
+
+if (closeArchiveBtn) closeArchiveBtn.addEventListener('click', () => archiveModal.classList.add('hidden'));
+if (closeArchiveBtn2) closeArchiveBtn2.addEventListener('click', () => archiveModal.classList.add('hidden'));
+
+// Preview an individual file inside archive
+async function previewArchiveEntry(item) {
+    if (!archivePreviewModal || !previewBody) return;
+    if (previewFileTitle) previewFileTitle.textContent = item.path;
+    previewBody.innerHTML = '<div style="padding: 1rem; color: var(--text-muted);">Loading preview...</div>';
+    archivePreviewModal.classList.remove('hidden');
+
+    try {
+        const ext = item.name.split('.').pop().toLowerCase();
+        const blob = await item.entry.async('blob');
+        const url = URL.createObjectURL(blob);
+
+        if (previewDownloadBtn) {
+            previewDownloadBtn.onclick = () => {
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = item.name;
+                a.click();
+            };
+        }
+
+        if (['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp'].includes(ext)) {
+            previewBody.innerHTML = `<img src="${url}" alt="${item.name}" />`;
+        } else if (['mp4', 'webm'].includes(ext)) {
+            previewBody.innerHTML = `<video controls autoplay src="${url}" style="max-width:100%;"></video>`;
+        } else if (['mp3', 'wav', 'ogg'].includes(ext)) {
+            previewBody.innerHTML = `<audio controls autoplay src="${url}"></audio>`;
+        } else if (['txt', 'md', 'json', 'js', 'css', 'html'].includes(ext)) {
+            const text = await item.entry.async('text');
+            const safeText = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            previewBody.innerHTML = `<pre><code>${safeText}</code></pre>`;
+        } else {
+            previewBody.innerHTML = `<p style="color: var(--text-muted);">Preview not available for this format.</p>`;
+        }
+    } catch (err) {
+        previewBody.innerHTML = `<p style="color: #ef4444;">Failed to load preview: ${err.message}</p>`;
+    }
+}
+
+if (closePreviewBtn) closePreviewBtn.addEventListener('click', () => archivePreviewModal.classList.add('hidden'));
+if (closePreviewBtn2) closePreviewBtn2.addEventListener('click', () => archivePreviewModal.classList.add('hidden'));
+
+// ============================================================
+// IN-BROWSER EXECUTION SANDBOX RUNNER ENGINE
+// ============================================================
+let currentRunnerState = {
+    fileOrBlob: null,
+    fileName: '',
+    entryHtmlPath: '',
+    mainUrl: null
+};
+
+function cleanupRunnerUrls() {
+    activeRunnerBlobUrls.forEach(url => URL.revokeObjectURL(url));
+    activeRunnerBlobUrls = [];
+}
+
+async function launchArchiveRunner(fileOrBlob, fileName, targetHtmlPath = null) {
+    if (!archiveRunnerModal || !runnerFrame) return;
+
+    currentRunnerState = {
+        fileOrBlob,
+        fileName: fileName || 'Application',
+        entryHtmlPath: targetHtmlPath || '',
+        mainUrl: null
+    };
+
+    cleanupRunnerUrls();
+    archiveRunnerModal.classList.remove('hidden');
+    if (runnerLoader) runnerLoader.classList.remove('hidden');
+    if (runnerLoaderText) runnerLoaderText.textContent = `Unpacking ${fileName}...`;
+    if (runnerAppTitle) runnerAppTitle.textContent = fileName;
+
+    try {
+        const zip = await JSZip.loadAsync(fileOrBlob);
+
+        // Find main HTML file if not specified
+        if (!targetHtmlPath) {
+            const files = Object.keys(zip.files).filter(k => !zip.files[k].dir);
+            targetHtmlPath = files.find(f => f.toLowerCase() === 'index.html' || f.toLowerCase().endsWith('/index.html'))
+                || files.find(f => f.toLowerCase().endsWith('.html') || f.toLowerCase().endsWith('.htm'));
+        }
+
+        if (!targetHtmlPath) {
+            throw new Error('No executable HTML entry file (like index.html) found in this archive.');
+        }
+
+        currentRunnerState.entryHtmlPath = targetHtmlPath;
+        if (runnerAppTitle) runnerAppTitle.textContent = `${fileName} — ${targetHtmlPath}`;
+
+        // Map all assets to in-memory Blob ObjectURLs
+        const assetMap = {};
+        const entries = Object.keys(zip.files).filter(k => !zip.files[k].dir);
+
+        for (const path of entries) {
+            const mime = getMimeType(path);
+            const blob = await zip.files[path].async('blob');
+            const typedBlob = new Blob([blob], { type: mime });
+            const objUrl = URL.createObjectURL(typedBlob);
+            activeRunnerBlobUrls.push(objUrl);
+
+            assetMap[path] = objUrl;
+            // Also map relative path from root and normalized forms
+            const normPath = path.replace(/^\.\//, '');
+            assetMap[normPath] = objUrl;
+            const basename = path.split('/').pop();
+            assetMap[basename] = objUrl;
+        }
+
+        // Resolve main HTML and replace relative links with virtual ObjectURLs
+        let htmlText = await zip.files[targetHtmlPath].async('text');
+
+        // Clean relative asset resolution
+        Object.keys(assetMap).forEach(key => {
+            if (!key.endsWith('.html')) {
+                const escapedKey = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                const regexSrc = new RegExp(`(src|href)=["']([^"']*${escapedKey})["']`, 'gi');
+                htmlText = htmlText.replace(regexSrc, `$1="${assetMap[key]}"`);
+            }
+        });
+
+        const mainBlob = new Blob([htmlText], { type: 'text/html' });
+        const mainUrl = URL.createObjectURL(mainBlob);
+        activeRunnerBlobUrls.push(mainUrl);
+        currentRunnerState.mainUrl = mainUrl;
+
+        runnerFrame.src = mainUrl;
+
+        if (runnerLoader) {
+            setTimeout(() => {
+                runnerLoader.classList.add('hidden');
+            }, 300);
+        }
+        showToast(`Running ${targetHtmlPath} in sandbox!`);
+    } catch (err) {
+        console.error('Runner error:', err);
+        if (runnerLoaderText) runnerLoaderText.textContent = `Execution failed: ${err.message}`;
+        showToast(err.message, 'error');
+    }
+}
+
+if (runnerReloadBtn) {
+    runnerReloadBtn.addEventListener('click', () => {
+        if (currentRunnerState.fileOrBlob) {
+            launchArchiveRunner(currentRunnerState.fileOrBlob, currentRunnerState.fileName, currentRunnerState.entryHtmlPath);
+        }
+    });
+}
+
+if (runnerFullscreenBtn) {
+    runnerFullscreenBtn.addEventListener('click', () => {
+        const content = document.querySelector('.runner-modal-content');
+        if (content) {
+            if (!document.fullscreenElement) {
+                content.requestFullscreen?.().catch(() => {});
+            } else {
+                document.exitFullscreen?.().catch(() => {});
+            }
+        }
+    });
+}
+
+if (runnerNewTabBtn) {
+    runnerNewTabBtn.addEventListener('click', () => {
+        if (currentRunnerState.mainUrl) {
+            window.open(currentRunnerState.mainUrl, '_blank');
+        }
+    });
+}
+
+if (closeRunnerBtn) {
+    closeRunnerBtn.addEventListener('click', () => {
+        if (archiveRunnerModal) archiveRunnerModal.classList.add('hidden');
+        if (runnerFrame) runnerFrame.src = 'about:blank';
+        cleanupRunnerUrls();
+    });
+}
+
+// ============================================================
+// "SHARE THIS APPLICATION" BUNDLE & EXPORT ENGINE
+// ============================================================
+async function createApplicationZipBundle() {
+    if (!window.JSZip) {
+        throw new Error('ZIP engine is initializing. Please try again.');
+    }
+
+    const zip = new JSZip();
+
+    // Fetch live application source files
+    let htmlContent = document.documentElement.outerHTML;
+    let cssContent = '';
+    let jsContent = '';
+
+    try {
+        const cssResp = await fetch('style.css');
+        if (cssResp.ok) cssContent = await cssResp.text();
+    } catch (e) {
+        console.warn('Could not fetch style.css directly, extracting styles.');
+        Array.from(document.querySelectorAll('style')).forEach(s => cssContent += s.textContent + '\n');
+    }
+
+    try {
+        const jsResp = await fetch('app.js');
+        if (jsResp.ok) jsContent = await jsResp.text();
+    } catch (e) {
+        console.warn('Could not fetch app.js directly.');
+    }
+
+    zip.file('index.html', htmlContent);
+    if (cssContent) zip.file('style.css', cssContent);
+    if (jsContent) zip.file('app.js', jsContent);
+
+    zip.file('README.txt', 
+`======================================================
+ShareWith — Ultra-Fast P2P File & Archive Sharing App
+======================================================
+
+How to run offline:
+1. Extract all files to a folder.
+2. Double click 'index.html' in Chrome, Edge, Safari, or Firefox.
+3. No server or internet installation required!
+
+Features:
+- Pure WebRTC Peer-to-Peer file sharing
+- ZIP and RAR archive inspection and extraction
+- In-browser sandboxed execution for web apps
+- Encrypted direct transfer
+`);
+
+    return await zip.generateAsync({ type: 'blob', compression: 'DEFLATE' });
+}
+
+// Nav Share App button click
+if (navShareAppBtn) {
+    navShareAppBtn.addEventListener('click', () => {
+        if (logoBtn) logoBtn.click();
+    });
+}
+
+// Export Application as .ZIP
+if (btnExportAppZip) {
+    btnExportAppZip.addEventListener('click', async () => {
+        showToast('Packaging ShareWith application into .ZIP...');
+        try {
+            const blob = await createApplicationZipBundle();
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'ShareWith-Application.zip';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            setTimeout(() => URL.revokeObjectURL(url), 20000);
+            showToast('ShareWith-Application.zip downloaded successfully!');
+        } catch (err) {
+            showToast(`Export failed: ${err.message}`, 'error');
+        }
+    });
+}
+
+// Send Application directly to Peer over P2P
+if (btnSendAppToPeer) {
+    btnSendAppToPeer.addEventListener('click', async () => {
+        showToast('Bundling application for direct P2P transfer...');
+        try {
+            const blob = await createApplicationZipBundle();
+            const appFile = new File([blob], 'ShareWith-Application.zip', { type: 'application/zip' });
+
+            // Close modal
+            if (logoQrModal) logoQrModal.classList.add('hidden');
+
+            // Switch to Send tab
+            const sendTabBtn = document.querySelector('[data-tab="send"]');
+            if (sendTabBtn) sendTabBtn.click();
+
+            // Prepare send batch with the packaged app
+            prepareToSendBatch([appFile]);
+            showToast('ShareWith packaged! Share your ID or connect to send.');
+        } catch (err) {
+            showToast(`Failed to package app: ${err.message}`, 'error');
+        }
+    });
+}
+
 
 
 
