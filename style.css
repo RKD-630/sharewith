@@ -1743,6 +1743,56 @@ footer {
    NEW FEATURES: SHARE APP & ARCHIVE (.ZIP/.RAR) RUNNER STYLES
    ============================================================ */
 
+/* Quick Share Shortcuts Row */
+.quick-share-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.65rem;
+    margin: 0.85rem 0 1rem;
+    flex-wrap: wrap;
+}
+
+.quick-share-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.55rem 0.95rem;
+    border-radius: 9999px;
+    background: rgba(99, 102, 241, 0.12);
+    border: 1px solid rgba(99, 102, 241, 0.3);
+    color: var(--text);
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.quick-share-chip svg,
+.quick-share-chip i {
+    width: 15px;
+    height: 15px;
+    color: var(--primary);
+}
+
+.quick-share-chip:hover {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: #ffffff;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(99, 102, 241, 0.4);
+}
+
+.quick-share-chip:hover svg,
+.quick-share-chip:hover i {
+    color: #ffffff;
+}
+
+.quick-share-chip:active {
+    transform: translateY(0);
+}
+
 /* Nav Share App Button */
 .nav-share-app-btn {
     display: inline-flex;

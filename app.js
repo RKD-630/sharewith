@@ -82,9 +82,9 @@ let canvasElement = document.createElement("canvas");
 let canvas = canvasElement.getContext("2d", { willReadFrequently: true });
 
 // Chunk Streaming & Performance Constants
-const CHUNK_SIZE = 64 * 1024; // 64 KB optimal WebRTC data channel chunk size
-const BUFFER_HIGH_WATER = 512 * 1024; // 512 KB backpressure ceiling
-const BUFFER_LOW_WATER = 128 * 1024;  // 128 KB resume drain threshold
+const CHUNK_SIZE = 128 * 1024; // 128 KB optimal chunk size for ultra-fast archive & large file streaming
+const BUFFER_HIGH_WATER = 1024 * 1024 * 2; // 2 MB backpressure ceiling
+const BUFFER_LOW_WATER = 512 * 1024;  // 512 KB resume drain threshold
 let isTransferAborted = false;
 
 // Receiver State for Chunk Reassembly
@@ -702,6 +702,25 @@ function prepareToSendBatch(files) {
 
     // Check if an archive (.zip or .rar) is among the selected files
     checkSelectedArchiveBanner(files);
+
+    // If already connected to peer, send transfer request immediately!
+    if (currentConn && currentConn.open) {
+        const fileMetadata = currentFiles.map(f => ({
+            name: f.name,
+            size: f.size,
+            type: f.type || 'application/octet-stream'
+        }));
+        currentConn.send({
+            type: 'file-header',
+            files: fileMetadata
+        });
+        transferZone.classList.remove('hidden');
+        transferTitle.textContent = "Waiting for Peer to Accept...";
+        if (transferBadgeText) transferBadgeText.textContent = "Request Sent";
+        if (progressStatusLabel) progressStatusLabel.textContent = "Waiting for peer approval...";
+        showToast("Files ready! Transfer request sent to connected peer.");
+        return;
+    }
 
     const targetId = targetIdInput.value.trim().toUpperCase();
     if (targetId) {
@@ -1510,10 +1529,30 @@ function checkSelectedArchiveBanner(files) {
         } else if (btnRunSelectedArchive) {
             btnRunSelectedArchive.classList.add('hidden');
         }
+        if (btnInspectSelectedArchive) btnInspectSelectedArchive.style.display = '';
+        if (btnZipBatchFiles) {
+            btnZipBatchFiles.style.display = files.length > 1 ? 'inline-flex' : 'none';
+            btnZipBatchFiles.onclick = () => zipSelectedBatchFiles(files);
+        }
+        lucide.createIcons();
+    } else if (files.length > 1 && window.JSZip) {
+        selectedArchiveFile = null;
+        selectedArchiveBanner.classList.remove('hidden');
+        if (archiveBannerTitle) archiveBannerTitle.textContent = `${files.length} Files Selected`;
+        if (archiveBannerDesc) archiveBannerDesc.textContent = `Bundle all files into a single ZIP for ultra-fast transfer`;
+        if (btnInspectSelectedArchive) btnInspectSelectedArchive.style.display = 'none';
+        if (btnRunSelectedArchive) btnRunSelectedArchive.style.display = 'none';
+        if (btnZipBatchFiles) {
+            btnZipBatchFiles.style.display = 'inline-flex';
+            btnZipBatchFiles.onclick = () => zipSelectedBatchFiles(files);
+        }
         lucide.createIcons();
     } else {
         selectedArchiveFile = null;
         selectedArchiveBanner.classList.add('hidden');
+        if (btnInspectSelectedArchive) btnInspectSelectedArchive.style.display = '';
+        if (btnRunSelectedArchive) btnRunSelectedArchive.style.display = '';
+        if (btnZipBatchFiles) btnZipBatchFiles.style.display = 'none';
     }
 }
 
@@ -1531,6 +1570,79 @@ if (btnRunSelectedArchive) {
             launchArchiveRunner(selectedArchiveFile, selectedArchiveFile.name);
         }
     });
+}
+
+// Quick Share Archive & Folder Compression Handlers
+const btnQuickArchive = document.getElementById('btnQuickArchive');
+const archiveFileInput = document.getElementById('archiveFileInput');
+const btnZipFolder = document.getElementById('btnZipFolder');
+const folderInput = document.getElementById('folderInput');
+const btnZipBatchFiles = document.getElementById('btnZipBatchFiles');
+
+if (btnQuickArchive && archiveFileInput) {
+    btnQuickArchive.addEventListener('click', () => archiveFileInput.click());
+    archiveFileInput.addEventListener('change', (e) => {
+        if (e.target.files.length > 0) {
+            prepareToSendBatch(Array.from(e.target.files));
+        }
+    });
+}
+
+// Zip entire folder and prepare for P2P share
+async function zipAndShareFolder(files) {
+    if (!files || files.length === 0) return;
+    if (!window.JSZip) {
+        showToast('ZIP compression engine is loading, please try again.', 'error');
+        return;
+    }
+
+    const firstRel = files[0].webkitRelativePath || '';
+    const folderName = firstRel.split('/')[0] || 'Folder_Bundle';
+    showToast(`Compressing "${folderName}" into ZIP...`);
+
+    try {
+        const zip = new JSZip();
+        for (const file of files) {
+            const relPath = file.webkitRelativePath || file.name;
+            zip.file(relPath, file);
+        }
+        const blob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE' });
+        const zipFile = new File([blob], `${folderName}.zip`, { type: 'application/zip' });
+        prepareToSendBatch([zipFile]);
+        showToast(`Folder "${folderName}.zip" ready to share!`);
+    } catch (err) {
+        showToast(`Folder compression failed: ${err.message}`, 'error');
+    }
+}
+
+if (btnZipFolder && folderInput) {
+    btnZipFolder.addEventListener('click', () => folderInput.click());
+    folderInput.addEventListener('change', (e) => {
+        if (e.target.files.length > 0) {
+            zipAndShareFolder(Array.from(e.target.files));
+        }
+    });
+}
+
+// Zip multiple selected files into one archive
+async function zipSelectedBatchFiles(files) {
+    if (!files || files.length === 0) return;
+    if (!window.JSZip) return;
+
+    showToast(`Compressing ${files.length} files into a single ZIP...`);
+    try {
+        const zip = new JSZip();
+        for (const f of files) {
+            zip.file(f.name, f);
+        }
+        const blob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE' });
+        const bundleName = `Bundle_${new Date().toISOString().slice(0, 10)}.zip`;
+        const zipFile = new File([blob], bundleName, { type: 'application/zip' });
+        prepareToSendBatch([zipFile]);
+        showToast(`Packaged into "${bundleName}" and ready to share!`);
+    } catch (err) {
+        showToast(`Batch compression failed: ${err.message}`, 'error');
+    }
 }
 
 // MIME Type Helper for extracted assets
