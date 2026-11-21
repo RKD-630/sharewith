@@ -1,11 +1,13 @@
 // Initialize Lucide Icons
-lucide.createIcons();
+if (window.lucide) {
+    lucide.createIcons();
+}
 
 // --- UI Elements ---
 const myIdEl = document.getElementById('myId');
 const connectionStatusEl = document.getElementById('connectionStatus');
-const statusDot = connectionStatusEl.querySelector('.status-dot');
-const statusText = connectionStatusEl.querySelector('.status-text');
+const statusDot = connectionStatusEl?.querySelector('.status-dot');
+const statusText = connectionStatusEl?.querySelector('.status-text');
 const qrContainer = document.getElementById('qrcode');
 
 const tabBtns = document.querySelectorAll('.tab-btn');
@@ -19,42 +21,42 @@ const connectBtn = document.getElementById('connectBtn');
 
 const transferZone = document.getElementById('transferZone');
 const transferTitle = document.getElementById('transferTitle');
-const transferModeBadge = document.getElementById('transferModeBadge');
-const transferBadgeText = document.getElementById('transferBadgeText');
-const radarStatusText = document.getElementById('radarStatusText');
-const fileTypeIcon = document.getElementById('fileTypeIcon');
 const fileNameText = document.getElementById('fileNameText');
 const fileSizeText = document.getElementById('fileSizeText');
-const batchCountBadge = document.getElementById('batchCountBadge');
 const progressBarFill = document.getElementById('progressBarFill');
 const progressPercent = document.getElementById('progressPercent');
 const progressStatusLabel = document.getElementById('progressStatusLabel');
+const transferBadgeText = document.getElementById('transferBadgeText');
+const batchCountBadge = document.getElementById('batchCountBadge');
+const fileTypeIcon = document.getElementById('fileTypeIcon');
+
+// Overall Progress and Telemetry HUD Elements
 const overallProgressContainer = document.getElementById('overallProgressContainer');
 const overallProgressLabel = document.getElementById('overallProgressLabel');
 const overallProgressPercent = document.getElementById('overallProgressPercent');
 const overallProgressBarFill = document.getElementById('overallProgressBarFill');
 const transferSpeedText = document.getElementById('transferSpeedText');
-const transferredBytesText = document.getElementById('transferredBytesText');
 const transferEtaText = document.getElementById('transferEtaText');
 
+// Incoming Transfer Modal Elements
 const incomingModal = document.getElementById('incomingModal');
 const incomingFileInfo = document.getElementById('incomingFileInfo');
 const incomingDocIcon = document.getElementById('incomingDocIcon');
 const acceptBtn = document.getElementById('acceptBtn');
 const declineBtn = document.getElementById('declineBtn');
+const largeFileOptionBox = document.getElementById('largeFileOptionBox');
+const directDiskSaveToggle = document.getElementById('directDiskSaveToggle');
 
+// Success Modal Elements
 const successModal = document.getElementById('successModal');
 const successMsgText = document.getElementById('successMsgText');
-const savedFilesList = document.getElementById('savedFilesList');
-const transferSummaryBox = document.getElementById('transferSummaryBox');
-const sumTotalSize = document.getElementById('sumTotalSize');
-const sumAvgSpeed = document.getElementById('sumAvgSpeed');
-const sumTimeTaken = document.getElementById('sumTimeTaken');
 const closeSuccessBtn = document.getElementById('closeSuccessBtn');
 const downloadAgainBtn = document.getElementById('downloadAgainBtn');
+const savedFilesList = document.getElementById('savedFilesList');
+const sumAvgSpeed = document.getElementById('sumAvgSpeed');
+const sumTimeTaken = document.getElementById('sumTimeTaken');
 
-const refreshBtn = document.getElementById('refreshBtn');
-
+// QR Scanner Elements
 const scanModal = document.getElementById('scanModal');
 const scanVideo = document.getElementById('scanVideo');
 const scanQrBtn = document.getElementById('scanQrBtn');
@@ -62,29 +64,80 @@ const closeScanBtn = document.getElementById('closeScanBtn');
 const cancelTransferBtn = document.getElementById('cancelTransferBtn');
 const toastContainer = document.getElementById('toastContainer');
 
-// --- PeerJS / P2P Logic ---
+// Radar and Channel Elements
 const radarContainer = document.getElementById('radarAnimation');
+const radarStatusText = document.getElementById('radarStatusText');
 const transferInfo = document.getElementById('transferInfo');
 const methodIcons = document.querySelectorAll('.method-icon');
 const methodLabel = document.getElementById('methodLabel');
 
-// --- PeerJS / P2P State ---
+const btnZipBatchFiles = document.getElementById('btnZipBatchFiles');
+
+// Selected Archive Banner Elements
+const selectedArchiveBanner = document.getElementById('selectedArchiveBanner');
+const archiveBannerTitle = document.getElementById('archiveBannerTitle');
+const archiveBannerDesc = document.getElementById('archiveBannerDesc');
+const btnInspectSelectedArchive = document.getElementById('btnInspectSelectedArchive');
+const btnRunSelectedArchive = document.getElementById('btnRunSelectedArchive');
+
+// Archive Inspector Modal Elements
+const archiveModal = document.getElementById('archiveModal');
+const archiveModalTitle = document.getElementById('archiveModalTitle');
+const archiveModalSubtitle = document.getElementById('archiveModalSubtitle');
+const closeArchiveBtn = document.getElementById('closeArchiveBtn');
+const closeArchiveBtn2 = document.getElementById('closeArchiveBtn2');
+const archiveSearchInput = document.getElementById('archiveSearchInput');
+const archiveFilesList = document.getElementById('archiveFilesList');
+const archiveSummaryText = document.getElementById('archiveSummaryText');
+const btnArchiveRunApp = document.getElementById('btnArchiveRunApp');
+const btnArchiveExtractAll = document.getElementById('btnArchiveExtractAll');
+
+// Sandboxed Runner Modal Elements
+const archiveRunnerModal = document.getElementById('archiveRunnerModal');
+const runnerAppTitle = document.getElementById('runnerAppTitle');
+const runnerFrame = document.getElementById('runnerFrame');
+const runnerLoader = document.getElementById('runnerLoader');
+const runnerLoaderText = document.getElementById('runnerLoaderText');
+const runnerReloadBtn = document.getElementById('runnerReloadBtn');
+const runnerFullscreenBtn = document.getElementById('runnerFullscreenBtn');
+const runnerNewTabBtn = document.getElementById('runnerNewTabBtn');
+const closeRunnerBtn = document.getElementById('closeRunnerBtn');
+
+// Archive Entry Preview Modal Elements
+const archivePreviewModal = document.getElementById('archivePreviewModal');
+const previewFileTitle = document.getElementById('previewFileTitle');
+const previewBody = document.getElementById('previewBody');
+const previewDownloadBtn = document.getElementById('previewDownloadBtn');
+const closePreviewBtn = document.getElementById('closePreviewBtn');
+const closePreviewBtn2 = document.getElementById('closePreviewBtn2');
+
+// Share Application Packaging Elements
+const navShareAppBtn = document.getElementById('navShareAppBtn');
+const btnExportAppZip = document.getElementById('btnExportAppZip');
+const btnSendAppToPeer = document.getElementById('btnSendAppToPeer');
+const logoBtn = document.getElementById('logoBtn');
+const logoQrModal = document.getElementById('logoQrModal');
+const closeLogoQrBtn = document.getElementById('closeLogoQrBtn');
+const logoQrCodeContainer = document.getElementById('logoQrCodeContainer');
+
+// --- P2P & Streaming State ---
 let peer = null;
 let currentConn = null;
-let currentFiles = []; // Array to store multiple files to send
+let currentFiles = [];
 let currentFileIndex = 0;
-let receivedBlobs = []; // Array to store multiple received files
-let incomingFiles = []; // Array to store incoming file metadata
+let receivedBlobs = [];
+let incomingFiles = [];
 let currentQrType = 'id';
 let myPeerId = '';
 let scanning = false;
 let canvasElement = document.createElement("canvas");
 let canvas = canvasElement.getContext("2d", { willReadFrequently: true });
+let logoQrInstance = null;
 
 // Chunk Streaming & Performance Constants for Large .ZIP & .RAR Files
 const CHUNK_SIZE = 128 * 1024; // 128 KB standard chunk size
 const LARGE_CHUNK_SIZE = 256 * 1024; // 256 KB turbo chunk size for large files (>= 50 MB)
-const BUFFER_HIGH_WATER = 1024 * 1024 * 4; // 4 MB backpressure ceiling
+const BUFFER_HIGH_WATER = 1024 * 1024 * 4; // 4 MB backpressure threshold
 const BUFFER_LOW_WATER = 1024 * 1024 * 1;  // 1 MB resume drain threshold
 let isTransferAborted = false;
 
@@ -102,240 +155,227 @@ let receiveState = {
     receivedBytesForFile: 0
 };
 
-// Real-Time Speed & Telemetry Tracker
+// Archive Inspection and Runner State
+let currentArchiveData = null;
+let currentArchiveBlob = null;
+let currentArchiveName = '';
+let activeRunnerBlobUrls = [];
+let selectedArchiveFile = null;
+
+// Telemetry & Metrics Tracker
 let metrics = {
     active: false,
-    mode: 'receive', // 'send' or 'receive'
+    mode: 'send', // 'send' or 'receive'
     startTime: 0,
-    totalBytes: 0,
+    totalBatchBytes: 0,
     transferredTotalBytes: 0,
-    currentFileBytes: 0,
     currentFileSize: 0,
-    lastCalcTime: 0,
-    lastCalcBytes: 0,
-    speedSamples: [],
-    currentSpeed: 0
+    currentFileBytes: 0,
+    lastTickTime: 0,
+    lastTickBytes: 0,
+    currentSpeedBps: 0,
+    intervalId: null
 };
 
-// Helper: Determine file icon by filename extension
-function getFileIcon(filename) {
-    if (!filename) return 'file-text';
-    const ext = filename.split('.').pop().toLowerCase();
-    if (['pdf'].includes(ext)) return 'file-text';
-    if (['doc', 'docx', 'txt', 'rtf', 'odt', 'pages', 'md', 'csv', 'xlsx', 'xls', 'pptx', 'ppt'].includes(ext)) return 'file-text';
-    if (['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'bmp', 'ico', 'heic', 'tiff'].includes(ext)) return 'image';
-    if (['zip', 'rar', '7z', 'tar', 'gz', 'bz2', 'iso', 'apk'].includes(ext)) return 'archive';
-    if (['mp3', 'wav', 'flac', 'aac', 'ogg', 'm4a', 'wma', 'opus'].includes(ext)) return 'music';
-    if (['mp4', 'mkv', 'mov', 'avi', 'webm', 'wmv', '3gp', 'flv'].includes(ext)) return 'video';
-    if (['js', 'ts', 'html', 'css', 'json', 'py', 'java', 'c', 'cpp', 'cs', 'php', 'rb', 'go', 'rs', 'sh', 'xml', 'sql'].includes(ext)) return 'code-2';
-    return 'file';
+// Serialized Download Tracker for preventing filename collision
+const downloadedFileNames = new Set();
+
+function getUniqueDownloadName(filename) {
+    if (!downloadedFileNames.has(filename)) {
+        downloadedFileNames.add(filename);
+        return filename;
+    }
+    const lastDot = filename.lastIndexOf('.');
+    const base = lastDot !== -1 ? filename.slice(0, lastDot) : filename;
+    const ext = lastDot !== -1 ? filename.slice(lastDot) : '';
+    let counter = 1;
+    while (downloadedFileNames.has(`${base} (${counter})${ext}`)) {
+        counter++;
+    }
+    const unique = `${base} (${counter})${ext}`;
+    downloadedFileNames.add(unique);
+    return unique;
 }
 
+// Format Speed Helper
 function formatSpeed(bytesPerSec) {
-    if (!bytesPerSec || bytesPerSec <= 0 || !isFinite(bytesPerSec)) return '0 KB/s';
-    if (bytesPerSec < 1024 * 1024) {
-        return (bytesPerSec / 1024).toFixed(1) + ' KB/s';
-    }
-    return (bytesPerSec / (1024 * 1024)).toFixed(2) + ' MB/s';
+    if (!bytesPerSec || bytesPerSec <= 0) return '0 KB/s';
+    if (bytesPerSec < 1024) return `${Math.round(bytesPerSec)} B/s`;
+    if (bytesPerSec < 1024 * 1024) return `${(bytesPerSec / 1024).toFixed(1)} KB/s`;
+    return `${(bytesPerSec / (1024 * 1024)).toFixed(1)} MB/s`;
 }
 
-function formatEta(seconds) {
-    if (!seconds || seconds <= 0 || !isFinite(seconds)) return '--';
+// Format Duration Helper
+function formatDuration(seconds) {
     if (seconds < 1) return '< 1s';
-    if (seconds < 60) return `${Math.ceil(seconds)}s`;
-    const m = Math.floor(seconds / 60);
-    const s = Math.ceil(seconds % 60);
-    return `${m}m ${s}s`;
+    if (seconds < 60) return `${Math.round(seconds)}s`;
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.round(seconds % 60);
+    return `${mins}m ${secs}s`;
 }
 
-// --- Continuous Serial Numbering for Downloaded Files ---
-const sessionDownloadedFiles = new Set();
+// Format Bytes Helper
+function formatBytes(bytes, decimals = 2) {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const dm = decimals < 0 ? 0 : decimals;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+}
 
-function getDownloadedFilesHistory() {
-    try {
-        const stored = localStorage.getItem('sharewith-downloaded-files');
-        return stored ? JSON.parse(stored) : [];
-    } catch (e) {
-        return [];
+// Get File Icon for Lucide
+function getFileIcon(filename) {
+    const ext = (filename || '').split('.').pop().toLowerCase();
+    switch (ext) {
+        case 'zip':
+        case 'rar':
+        case '7z':
+        case 'tar':
+        case 'gz':
+            return 'archive';
+        case 'pdf':
+            return 'file-text';
+        case 'png':
+        case 'jpg':
+        case 'jpeg':
+        case 'gif':
+        case 'svg':
+        case 'webp':
+            return 'image';
+        case 'mp4':
+        case 'webm':
+        case 'mkv':
+        case 'avi':
+            return 'video';
+        case 'mp3':
+        case 'wav':
+        case 'ogg':
+        case 'flac':
+            return 'music';
+        case 'html':
+        case 'htm':
+        case 'js':
+        case 'ts':
+        case 'css':
+        case 'json':
+            return 'code-2';
+        default:
+            return 'file';
     }
 }
 
-function recordDownloadedFileName(filename) {
-    if (!filename) return;
-    sessionDownloadedFiles.add(filename.toLowerCase());
-    try {
-        const history = getDownloadedFilesHistory();
-        if (!history.some(item => item.toLowerCase() === filename.toLowerCase())) {
-            history.push(filename);
-            if (history.length > 500) history.shift();
-            localStorage.setItem('sharewith-downloaded-files', JSON.stringify(history));
-        }
-    } catch (e) {}
-}
+// Telemetry Logic
+function startMetrics(mode, totalBatchBytes, currentFileSize) {
+    metrics.active = true;
+    metrics.mode = mode;
+    metrics.startTime = performance.now();
+    metrics.totalBatchBytes = totalBatchBytes || 0;
+    metrics.transferredTotalBytes = 0;
+    metrics.currentFileSize = currentFileSize || 0;
+    metrics.currentFileBytes = 0;
+    metrics.lastTickTime = performance.now();
+    metrics.lastTickBytes = 0;
+    metrics.currentSpeedBps = 0;
 
-function isFileNameTaken(filename) {
-    if (!filename) return false;
-    const lower = filename.toLowerCase();
-    if (sessionDownloadedFiles.has(lower)) return true;
-    const history = getDownloadedFilesHistory();
-    return history.some(item => item.toLowerCase() === lower);
-}
-
-/**
- * Returns a unique, serialized file name if a file with this name was already saved.
- * Automatically continues serial numbers:
- *   "document.pdf" -> if exists: "document (1).pdf" -> "document (2).pdf" -> "document (3).pdf"
- *   "report (1).pdf" -> if exists: "report (2).pdf"
- */
-function getUniqueDownloadName(originalName) {
-    if (!originalName) originalName = 'document';
-
-    // If not taken, record and return as is
-    if (!isFileNameTaken(originalName)) {
-        recordDownloadedFileName(originalName);
-        return originalName;
-    }
-
-    // Split base name and extension
-    const dotIndex = originalName.lastIndexOf('.');
-    let base = originalName;
-    let ext = '';
-    if (dotIndex > 0) {
-        base = originalName.substring(0, dotIndex);
-        ext = originalName.substring(dotIndex); // includes '.'
-    }
-
-    // Check if the base already has a serial number like "name (1)" or "name (2)"
-    const serialMatch = base.match(/^(.*?)\s*\((\d+)\)$/);
-    let cleanBase = base;
-    let seq = 1;
-
-    if (serialMatch) {
-        cleanBase = serialMatch[1].trim();
-        seq = parseInt(serialMatch[2], 10) + 1;
-    }
-
-    // Find the next available continuous serial number
-    let candidate = '';
-    while (true) {
-        candidate = `${cleanBase} (${seq})${ext}`;
-        if (!isFileNameTaken(candidate)) {
-            recordDownloadedFileName(candidate);
-            return candidate;
-        }
-        seq++;
-    }
-}
-
-function startMetrics(mode, totalBytes, firstFileSize) {
-    const now = performance.now();
-    metrics = {
-        active: true,
-        mode: mode,
-        startTime: now,
-        totalBytes: totalBytes || 0,
-        transferredTotalBytes: 0,
-        currentFileBytes: 0,
-        currentFileSize: firstFileSize || 0,
-        lastCalcTime: now,
-        lastCalcBytes: 0,
-        speedSamples: [],
-        currentSpeed: 0
-    };
+    if (metrics.intervalId) clearInterval(metrics.intervalId);
+    metrics.intervalId = setInterval(updateMetricsTick, 250);
     updateMetricsUI();
 }
 
-function recordProgressBytes(bytesAdded) {
+function recordProgressBytes(bytes) {
+    metrics.transferredTotalBytes += bytes;
+    metrics.currentFileBytes += bytes;
+    updateMetricsUI();
+}
+
+function updateMetricsTick() {
     if (!metrics.active) return;
-    metrics.transferredTotalBytes += bytesAdded;
-    metrics.currentFileBytes += bytesAdded;
-
     const now = performance.now();
-    const elapsedSinceLast = (now - metrics.lastCalcTime) / 1000;
-    
-    // Update rolling average speed every ~150ms for responsive and smooth UI
-    if (elapsedSinceLast >= 0.15) {
-        const bytesInInterval = metrics.transferredTotalBytes - metrics.lastCalcBytes;
-        const instantSpeed = bytesInInterval / elapsedSinceLast;
-        
-        metrics.speedSamples.push(instantSpeed);
-        if (metrics.speedSamples.length > 5) metrics.speedSamples.shift();
-        
-        const sum = metrics.speedSamples.reduce((a, b) => a + b, 0);
-        metrics.currentSpeed = sum / metrics.speedSamples.length;
-        
-        metrics.lastCalcTime = now;
-        metrics.lastCalcBytes = metrics.transferredTotalBytes;
+    const elapsedSec = (now - metrics.lastTickTime) / 1000;
+    if (elapsedSec >= 0.25) {
+        const bytesSinceTick = metrics.transferredTotalBytes - metrics.lastTickBytes;
+        metrics.currentSpeedBps = bytesSinceTick / elapsedSec;
+        metrics.lastTickTime = now;
+        metrics.lastTickBytes = metrics.transferredTotalBytes;
+        updateMetricsUI();
     }
-    
-    updateMetricsUI();
 }
 
 function updateMetricsUI() {
-    // Current file progress percentage
-    const filePct = metrics.currentFileSize > 0
-        ? Math.min(100, Math.round((metrics.currentFileBytes / metrics.currentFileSize) * 100))
+    // Current File Progress
+    const fileRatio = metrics.currentFileSize > 0 
+        ? Math.min(1, metrics.currentFileBytes / metrics.currentFileSize) 
         : 0;
-    
-    if (progressBarFill) progressBarFill.style.width = `${filePct}%`;
-    if (progressPercent) progressPercent.textContent = `${filePct}%`;
+    const filePercent = Math.round(fileRatio * 100);
+    if (progressBarFill) progressBarFill.style.width = `${filePercent}%`;
+    if (progressPercent) progressPercent.textContent = `${filePercent}%`;
 
-    // Speed display
+    // Overall Batch Progress
+    if (overallProgressBarFill && overallProgressPercent && metrics.totalBatchBytes > 0) {
+        const batchRatio = Math.min(1, metrics.transferredTotalBytes / metrics.totalBatchBytes);
+        const batchPercent = Math.round(batchRatio * 100);
+        overallProgressBarFill.style.width = `${batchPercent}%`;
+        overallProgressPercent.textContent = `${batchPercent}%`;
+    }
+
+    // Telemetry Speed & ETA
     if (transferSpeedText) {
-        transferSpeedText.textContent = formatSpeed(metrics.currentSpeed);
-    }
-    
-    // Transferred display
-    if (transferredBytesText) {
-        const currentBytesFormatted = formatBytes(metrics.transferredTotalBytes);
-        const totalBytesFormatted = formatBytes(metrics.totalBytes);
-        transferredBytesText.textContent = `${currentBytesFormatted} / ${totalBytesFormatted}`;
+        transferSpeedText.textContent = formatSpeed(metrics.currentSpeedBps);
     }
 
-    // Estimated remaining time (ETA)
     if (transferEtaText) {
-        const remaining = Math.max(0, metrics.totalBytes - metrics.transferredTotalBytes);
-        if (metrics.currentSpeed > 0 && remaining > 0) {
-            const etaSec = remaining / metrics.currentSpeed;
-            transferEtaText.textContent = formatEta(etaSec);
-        } else if (remaining === 0 && metrics.transferredTotalBytes > 0) {
-            transferEtaText.textContent = 'Done!';
+        if (metrics.currentSpeedBps > 1024) {
+            const remainingBytes = Math.max(0, metrics.totalBatchBytes - metrics.transferredTotalBytes);
+            const remainingSeconds = remainingBytes / metrics.currentSpeedBps;
+            transferEtaText.textContent = formatDuration(remainingSeconds);
         } else {
-            transferEtaText.textContent = 'Estimating...';
+            transferEtaText.textContent = '--';
         }
-    }
-
-    // Overall progress (for batch transfers)
-    if (overallProgressBarFill && overallProgressPercent) {
-        const overallPct = metrics.totalBytes > 0
-            ? Math.min(100, Math.round((metrics.transferredTotalBytes / metrics.totalBytes) * 100))
-            : filePct;
-        overallProgressBarFill.style.width = `${overallPct}%`;
-        overallProgressPercent.textContent = `${overallPct}%`;
     }
 }
 
-// Initialize Peer
+function stopMetrics() {
+    metrics.active = false;
+    if (metrics.intervalId) {
+        clearInterval(metrics.intervalId);
+        metrics.intervalId = null;
+    }
+}
+
+// Toast Notification
+function showToast(msg, type = "info") {
+    if (!toastContainer) return;
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.textContent = msg;
+    toastContainer.appendChild(toast);
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        setTimeout(() => toast.remove(), 300);
+    }, 3200);
+}
+
+// ============================================================
+// PEERJS CONNECTION & HIGH-SPEED CHANNEL MANAGEMENT
+// ============================================================
 function initPeer() {
-    // Generate a shorter, readable ID (optional, PeerJS generates longer ones by default)
     const customId = Math.random().toString(36).substr(2, 6).toUpperCase();
     
     peer = new Peer(customId, {
-        debug: 3
+        debug: 1
     });
 
     peer.on('open', (id) => {
         myPeerId = id;
-        myIdEl.textContent = id;
-        statusDot.className = 'status-dot online';
-        statusText.textContent = '';
-        if (refreshBtn) refreshBtn.classList.remove('spinning');
+        if (myIdEl) myIdEl.textContent = id;
+        if (statusDot) statusDot.className = 'status-dot online';
+        if (statusText) statusText.textContent = 'Ready to sync';
         updateQR();
     });
 
     peer.on('error', (err) => {
         console.error('Peer error:', err);
-        if (refreshBtn) refreshBtn.classList.remove('spinning');
         if (err.type === 'peer-unavailable') {
             showToast("Device not found. Please verify the Connection ID or QR code.", "error");
             if (transferZone) transferZone.classList.add('hidden');
@@ -346,8 +386,8 @@ function initPeer() {
             setTimeout(initPeer, 500);
             return;
         }
-        statusDot.className = 'status-dot offline';
-        statusText.textContent = 'Offline (Retry in 5s)';
+        if (statusDot) statusDot.className = 'status-dot offline';
+        if (statusText) statusText.textContent = 'Offline (Retry in 5s)';
         setTimeout(() => {
             if (peer && !peer.destroyed) {
                 try { peer.destroy(); } catch (e) {}
@@ -362,57 +402,27 @@ function initPeer() {
     });
 }
 
-// Refresh P2P Connection & ID
-function refreshConnection() {
-    if (refreshBtn) refreshBtn.classList.add('spinning');
-    statusDot.className = 'status-dot offline';
-    statusText.textContent = 'Refreshing ID & server...';
-    showToast('Refreshing Connection & ID...');
-
-    if (currentConn) {
-        try { currentConn.close(); } catch (e) {}
-        currentConn = null;
-    }
-
-    if (peer && !peer.destroyed) {
-        try { peer.destroy(); } catch (e) {}
-        peer = null;
-    }
-
-    setTimeout(() => {
-        initPeer();
-        setTimeout(() => {
-            if (refreshBtn) refreshBtn.classList.remove('spinning');
-        }, 1200);
-    }, 300);
-}
-
-if (refreshBtn) {
-    refreshBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        refreshConnection();
-    });
-}
-
 function handleConnection(conn) {
     currentConn = conn;
     
     conn.on('open', () => {
         console.log("Connection established with:", conn.peer);
-        if (radarContainer) radarContainer.classList.add('hidden');
-        
         // If we have files ready to send, initiate the metadata exchange
         if (currentFiles.length > 0) {
             conn.send({
                 type: 'metadata-batch',
-                files: currentFiles.map(f => ({ name: f.name, size: f.size, type: f.type }))
+                files: currentFiles.map(f => ({ 
+                    name: f.name, 
+                    size: f.size, 
+                    type: f.type || 'application/octet-stream' 
+                }))
             });
-            showToast(`Connected! Sending transfer request for ${currentFiles.length} file(s)...`);
+            showToast(`Connected! Transfer request sent for ${currentFiles.length} file(s)...`);
         }
     });
 
-    conn.on('data', (data) => {
-        if (!data) return;
+    conn.on('data', async (data) => {
+        if (!data || !data.type) return;
 
         if (data.type === 'metadata-batch') {
             // Sender sent batch metadata, ask for acceptance
@@ -421,17 +431,17 @@ function handleConnection(conn) {
             const firstFile = incomingFiles[0] || { name: 'Document' };
             const names = incomingFiles.map(f => f.name).join(', ');
             
-            incomingFileInfo.textContent = incomingFiles.length > 1
-                ? `${incomingFiles.length} Documents: ${names.length > 36 ? names.substring(0, 33) + '...' : names} (${formatBytes(totalSize)})`
-                : `"${firstFile.name}" (${formatBytes(totalSize)})`;
+            if (incomingFileInfo) {
+                incomingFileInfo.textContent = incomingFiles.length > 1
+                    ? `${incomingFiles.length} Documents: ${names.length > 36 ? names.substring(0, 33) + '...' : names} (${formatBytes(totalSize)})`
+                    : `"${firstFile.name}" (${formatBytes(totalSize)})`;
+            }
             
             if (incomingDocIcon) {
                 incomingDocIcon.setAttribute('data-lucide', getFileIcon(firstFile.name));
             }
 
             // Detect large archive transfers (>= 50 MB) and show Direct-to-Disk streaming option if supported
-            const largeFileOptionBox = document.getElementById('largeFileOptionBox');
-            const directDiskSaveToggle = document.getElementById('directDiskSaveToggle');
             if (largeFileOptionBox) {
                 const isLarge = totalSize >= 50 * 1024 * 1024;
                 const hasFsAccess = 'showSaveFilePicker' in window;
@@ -443,8 +453,8 @@ function handleConnection(conn) {
                 }
             }
 
-            incomingModal.classList.remove('hidden');
-            lucide.createIcons();
+            if (incomingModal) incomingModal.classList.remove('hidden');
+            if (window.lucide) lucide.createIcons();
 
         } else if (data.type === 'stream-start') {
             // Streaming start for incoming document / large archive
@@ -455,7 +465,7 @@ function handleConnection(conn) {
             receiveState.receivedBytesForFile = 0;
             receiveState.currentFileIndex = data.index || 0;
 
-            transferZone.classList.remove('hidden');
+            if (transferZone) transferZone.classList.remove('hidden');
             if (radarContainer) radarContainer.classList.add('hidden');
             if (transferInfo) transferInfo.classList.remove('hidden');
 
@@ -467,13 +477,19 @@ function handleConnection(conn) {
             }
             
             const totalCount = incomingFiles.length || 1;
-            transferTitle.textContent = totalCount > 1 
-                ? `Downloading (${(data.index || 0) + 1}/${totalCount}): ${data.name}`
-                : `Downloading Document...`;
+            if (transferTitle) {
+                transferTitle.textContent = totalCount > 1 
+                    ? `Downloading (${(data.index || 0) + 1}/${totalCount}): ${data.name}`
+                    : `Downloading Document...`;
+            }
             
-            fileNameText.textContent = data.name;
-            fileNameText.title = data.name;
-            fileSizeText.textContent = formatBytes(data.size || 0);
+            if (fileNameText) {
+                fileNameText.textContent = data.name;
+                fileNameText.title = data.name;
+            }
+            if (fileSizeText) {
+                fileSizeText.textContent = formatBytes(data.size || 0);
+            }
 
             if (batchCountBadge) {
                 if (totalCount > 1) {
@@ -486,7 +502,7 @@ function handleConnection(conn) {
 
             if (fileTypeIcon) {
                 fileTypeIcon.setAttribute('data-lucide', getFileIcon(data.name));
-                lucide.createIcons();
+                if (window.lucide) lucide.createIcons();
             }
 
             if (overallProgressContainer) {
@@ -591,6 +607,7 @@ function handleConnection(conn) {
                 // All documents received!
                 const totalDurationSec = Math.max(0.1, (performance.now() - metrics.startTime) / 1000);
                 const avgSpeed = metrics.transferredTotalBytes / totalDurationSec;
+                stopMetrics();
 
                 setTimeout(() => {
                     showSuccess(
@@ -604,308 +621,87 @@ function handleConnection(conn) {
                         avgSpeed, 
                         totalDurationSec
                     );
-                    transferZone.classList.add('hidden');
-                }, 400);
-            }
-                        totalDurationSec
-                    );
-                    transferZone.classList.add('hidden');
+                    if (transferZone) transferZone.classList.add('hidden');
                 }, 400);
             }
 
         } else if (data.type === 'accept') {
-            // Receiver accepted, send all files with high-speed chunk streaming
+            // Receiver accepted, stream all files with high-speed chunking
             sendFileDataBatch();
-
         } else if (data.type === 'decline') {
             showToast("Transfer declined by receiver.", "error");
-            transferZone.classList.add('hidden');
-            if (radarContainer) radarContainer.classList.add('hidden');
-
-        } else if (data.type === 'cancel') {
-            isTransferAborted = true;
-            transferZone.classList.add('hidden');
-            if (radarContainer) radarContainer.classList.add('hidden');
-            showToast("Transfer was cancelled by peer.", "error");
+            if (transferZone) transferZone.classList.add('hidden');
+            stopMetrics();
         }
     });
 
     conn.on('close', () => {
         showToast("Connection closed.", "info");
         console.log("Connection closed");
+        stopMetrics();
     });
 
     conn.on('error', (err) => {
         console.error("Connection error:", err);
-        showToast("Connection error encountered.", "error");
+        showToast("P2P DataChannel Error", "error");
+        stopMetrics();
     });
 }
 
-// --- Toast System ---
-function showToast(msg, type = "info") {
-    const toast = document.createElement('div');
-    toast.className = `toast ${type}`;
-    toast.textContent = msg;
-    toastContainer.appendChild(toast);
-    setTimeout(() => {
-        toast.style.opacity = '0';
-        setTimeout(() => toast.remove(), 300);
-    }, 3000);
-}
+// ============================================================
+// HIGH-SPEED ADAPTIVE CHUNK STREAMING SENDER ENGINE
+// ============================================================
+async function sendFileDataBatch() {
+    if (!currentFiles || currentFiles.length === 0 || !currentConn) return;
 
-// --- QR Scanner Logic ---
-async function startScanner() {
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        showToast("Scanner requires HTTPS or localhost.", "error");
-        return;
-    }
-    try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
-        scanVideo.srcObject = stream;
-        scanVideo.setAttribute("playsinline", true);
-        scanVideo.play();
-        scanning = true;
-        scanModal.classList.remove('hidden');
-        requestAnimationFrame(tick);
-    } catch (err) {
-        showToast("Camera access denied.", "error");
-        console.error(err);
-    }
-}
+    isTransferAborted = false;
+    if (transferZone) transferZone.classList.remove('hidden');
+    if (radarContainer) radarContainer.classList.add('hidden');
+    if (transferInfo) transferInfo.classList.remove('hidden');
 
-function stopScanner() {
-    scanning = false;
-    if (scanVideo.srcObject) {
-        scanVideo.srcObject.getTracks().forEach(track => track.stop());
-    }
-    scanModal.classList.add('hidden');
-}
+    if (transferBadgeText) transferBadgeText.textContent = "🚀 Turbo P2P Streaming";
+    if (progressStatusLabel) progressStatusLabel.textContent = "Connecting high-speed stream...";
 
-function tick() {
-    if (!scanning) return;
-    if (scanVideo.readyState === scanVideo.HAVE_ENOUGH_DATA) {
-        canvasElement.height = scanVideo.videoHeight;
-        canvasElement.width = scanVideo.videoWidth;
-        canvas.drawImage(scanVideo, 0, 0, canvasElement.width, canvasElement.height);
-        
-        const imageData = canvas.getImageData(0, 0, canvasElement.width, canvasElement.height);
-        const code = jsQR(imageData.data, imageData.width, imageData.height, {
-            inversionAttempts: "dontInvert",
-        });
+    const totalBatchBytes = currentFiles.reduce((acc, f) => acc + (f.size || 0), 0);
+    startMetrics('send', totalBatchBytes, currentFiles[0].size);
 
-        if (code) {
-            console.log("Found QR code", code.data);
-            showToast("ID Found! Connecting...");
-            targetIdInput.value = code.data;
-            stopScanner();
-            
-            // Smarter redirection/action based on state
-            if (currentFiles.length > 0) {
-                initiateSend(code.data);
-            } else {
-                // If no file, assume we are receiving
-                initiateReceive(code.data);
-            }
+    if (overallProgressContainer) {
+        if (currentFiles.length > 1) {
+            overallProgressContainer.classList.remove('hidden');
+        } else {
+            overallProgressContainer.classList.add('hidden');
         }
     }
-    requestAnimationFrame(tick);
-}
 
-scanQrBtn.addEventListener('click', startScanner);
-closeScanBtn.addEventListener('click', stopScanner);
+    const totalFiles = currentFiles.length;
 
-// --- Interaction Logic ---
-
-// Tab Switching
-tabBtns.forEach(btn => {
-    btn.addEventListener('click', () => {
-        tabBtns.forEach(b => b.classList.remove('active'));
-        tabContents.forEach(c => c.classList.remove('active'));
-        
-        btn.classList.add('active');
-        document.getElementById(btn.dataset.tab + 'Tab').classList.add('active');
-    });
-});
-
-// File Selection
-dropZone.addEventListener('click', () => fileInput.click());
-
-fileInput.addEventListener('change', (e) => {
-    if (e.target.files.length > 0) {
-        prepareToSendBatch(Array.from(e.target.files));
-    }
-});
-
-dropZone.addEventListener('dragover', (e) => {
-    e.preventDefault();
-    dropZone.classList.add('dragover');
-});
-
-dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
-
-dropZone.addEventListener('drop', (e) => {
-    e.preventDefault();
-    dropZone.classList.remove('dragover');
-    if (e.dataTransfer.files.length > 0) {
-        prepareToSendBatch(Array.from(e.dataTransfer.files));
-    }
-});
-
-function prepareToSendBatch(files) {
-    currentFiles = files;
-    const totalSize = files.reduce((acc, f) => acc + f.size, 0);
-    
-    fileNameText.textContent = files.length > 1 ? `${files.length} Files Selected` : files[0].name;
-    fileNameText.title = files.length > 1 ? `${files.length} Files Selected` : files[0].name;
-    fileSizeText.textContent = formatBytes(totalSize);
-
-    if (fileTypeIcon) {
-        fileTypeIcon.setAttribute('data-lucide', getFileIcon(files[0].name));
-        lucide.createIcons();
-    }
-    
-    // Switch UI to show files are selected
-    const dropZoneIcon = dropZone.querySelector('.drop-icon');
-    const dropZoneText = dropZone.querySelector('p');
-    
-    if (dropZoneIcon && dropZoneText) {
-        dropZoneIcon.setAttribute('data-lucide', 'check-circle-2');
-        dropZoneIcon.className = 'drop-icon success-pulse';
-        const fileLabel = files.length > 1 ? `${files.length} Document(s)` : files[0].name;
-        dropZoneText.innerHTML = `Ready to send: <span class="gradient-text">${fileLabel}</span><br><small>${formatBytes(totalSize)}</small>`;
-        lucide.createIcons();
-    }
-
-    // Check if an archive (.zip or .rar) is among the selected files
-    checkSelectedArchiveBanner(files);
-
-    // If already connected to peer, send transfer request immediately!
-    if (currentConn && currentConn.open) {
-        const fileMetadata = currentFiles.map(f => ({
-            name: f.name,
-            size: f.size,
-            type: f.type || 'application/octet-stream'
-        }));
-        currentConn.send({
-            type: 'file-header',
-            files: fileMetadata
-        });
-        transferZone.classList.remove('hidden');
-        transferTitle.textContent = "Waiting for Peer to Accept...";
-        if (transferBadgeText) transferBadgeText.textContent = "Request Sent";
-        if (progressStatusLabel) progressStatusLabel.textContent = "Waiting for peer approval...";
-        showToast("Files ready! Transfer request sent to connected peer.");
-        return;
-    }
-
-    const targetId = targetIdInput.value.trim().toUpperCase();
-    if (targetId) {
-        initiateSend(targetId);
-    } else {
-        showToast("Files ready. Share your ID or scan the QR code to connect.");
-    }
-}
-
-function initiateSend(targetId) {
-    if (!peer) return;
-    isTransferAborted = false;
-    
-    transferZone.classList.remove('hidden');
-    radarContainer.classList.remove('hidden');
-    transferInfo.classList.add('hidden');
-    if (radarStatusText) radarStatusText.textContent = "Connecting to peer device...";
-    
-    progressBarFill.style.width = '0%';
-    progressPercent.textContent = '0%';
-    if (transferSpeedText) transferSpeedText.textContent = '0 KB/s';
-    if (transferredBytesText) transferredBytesText.textContent = '0 B';
-    if (transferEtaText) transferEtaText.textContent = '--';
-
-    const conn = peer.connect(targetId, { reliable: true });
-    handleConnection(conn);
-
-    conn.on('open', () => {
-        radarContainer.classList.add('hidden');
-        transferInfo.classList.remove('hidden');
-        transferTitle.textContent = "Requesting Access from Peer...";
-        if (transferBadgeText) transferBadgeText.textContent = "Connecting";
-        if (progressStatusLabel) progressStatusLabel.textContent = "Waiting for approval...";
-    });
-    
-    conn.on('error', (err) => {
-        console.error("Connection error:", err);
-        showToast("Device Discovery / Connection Failed", "error");
-        transferZone.classList.add('hidden');
-        radarContainer.classList.add('hidden');
-    });
-}
-
-function initiateReceive(targetId) {
-    if (!peer) return;
-    isTransferAborted = false;
-
-    transferZone.classList.remove('hidden');
-    radarContainer.classList.remove('hidden');
-    transferInfo.classList.add('hidden');
-    if (radarStatusText) radarStatusText.textContent = "Connecting to sender host...";
-
-    progressBarFill.style.width = '0%';
-    progressPercent.textContent = '0%';
-    if (transferSpeedText) transferSpeedText.textContent = '0 KB/s';
-    if (transferredBytesText) transferredBytesText.textContent = '0 B';
-    if (transferEtaText) transferEtaText.textContent = '--';
-
-    const conn = peer.connect(targetId, { reliable: true });
-    handleConnection(conn);
-
-    conn.on('open', () => {
-        radarContainer.classList.add('hidden');
-        transferInfo.classList.remove('hidden');
-        transferTitle.textContent = "Connected to Host";
-        if (transferBadgeText) transferBadgeText.textContent = "Ready";
-        if (progressStatusLabel) progressStatusLabel.textContent = "Waiting for sender to push files...";
-    });
-
-    conn.on('error', (err) => {
-        console.error("Connection error:", err);
-        showToast("Connection to Host Failed", "error");
-        transferZone.classList.add('hidden');
-        radarContainer.classList.add('hidden');
-    });
-}
-
-async function sendFileDataBatch() {
-    isTransferAborted = false;
-    transferZone.classList.remove('hidden');
-    radarContainer.classList.add('hidden');
-    transferInfo.classList.remove('hidden');
-
-    const totalBatchSize = currentFiles.reduce((acc, f) => acc + f.size, 0);
-    startMetrics('send', totalBatchSize, currentFiles[0]?.size || 0);
-
-    if (transferBadgeText) transferBadgeText.textContent = "📤 Sending Document";
-    if (progressStatusLabel) progressStatusLabel.textContent = "High-Speed P2P Streaming...";
-
-    if (currentFiles.length > 1) {
-        overallProgressContainer.classList.remove('hidden');
-    } else {
-        overallProgressContainer.classList.add('hidden');
-    }
-
-    for (let i = 0; i < currentFiles.length; i++) {
+    for (let i = 0; i < totalFiles; i++) {
         if (isTransferAborted) break;
+
         const file = currentFiles[i];
+        currentFileIndex = i;
 
+        // Reset current file progress metrics
         metrics.currentFileBytes = 0;
-        metrics.currentFileSize = file.size;
+        metrics.currentFileSize = file.size || 0;
+        updateMetricsUI();
 
-        fileNameText.textContent = file.name;
-        fileNameText.title = file.name;
-        fileSizeText.textContent = formatBytes(file.size);
+        if (transferTitle) {
+            transferTitle.textContent = totalFiles > 1 
+                ? `Sending (${i + 1}/${totalFiles}): ${file.name}`
+                : `Streaming: ${file.name}`;
+        }
+        if (fileNameText) {
+            fileNameText.textContent = file.name;
+            fileNameText.title = file.name;
+        }
+        if (fileSizeText) {
+            fileSizeText.textContent = formatBytes(file.size);
+        }
 
         if (batchCountBadge) {
-            if (currentFiles.length > 1) {
-                batchCountBadge.textContent = `${i + 1} / ${currentFiles.length}`;
+            if (totalFiles > 1) {
+                batchCountBadge.textContent = `${i + 1} / ${totalFiles}`;
                 batchCountBadge.classList.remove('hidden');
             } else {
                 batchCountBadge.classList.add('hidden');
@@ -914,14 +710,16 @@ async function sendFileDataBatch() {
 
         if (fileTypeIcon) {
             fileTypeIcon.setAttribute('data-lucide', getFileIcon(file.name));
-            lucide.createIcons();
+            if (window.lucide) lucide.createIcons();
         }
 
-        transferTitle.textContent = currentFiles.length > 1
-            ? `Sending Document (${i + 1}/${currentFiles.length})`
-            : `Sending Document...`;
+        if (progressStatusLabel) {
+            progressStatusLabel.textContent = file.size >= 50 * 1024 * 1024 
+                ? "Streaming Large Archive (256 KB Chunks)..." 
+                : "Streaming Document (128 KB Chunks)...";
+        }
 
-        // Adaptive chunk sizing: 256 KB for files >= 50 MB (archives), 128 KB for smaller files
+        // Adaptive chunk sizing: 256 KB for files >= 50 MB (large archives), 128 KB for smaller
         const currentChunkSize = file.size >= 50 * 1024 * 1024 ? LARGE_CHUNK_SIZE : CHUNK_SIZE;
         const totalChunks = Math.ceil(file.size / currentChunkSize) || 1;
 
@@ -963,7 +761,7 @@ async function sendFileDataBatch() {
                         dc.bufferedAmountLowThreshold = BUFFER_LOW_WATER;
                         dc.onbufferedamountlow = done;
                     }
-                    setTimeout(done, 40); // Safety timeout so large transfers never stall
+                    setTimeout(done, 40); // Safety timeout so large transfers never freeze
                 });
             }
 
@@ -981,176 +779,129 @@ async function sendFileDataBatch() {
             recordProgressBytes(buffer.byteLength);
         }
 
-        if (isTransferAborted) break;
+        if (!isTransferAborted) {
+            // Signal stream-end for this file
+            currentConn.send({
+                type: 'stream-end',
+                index: i,
+                name: file.name
+            });
 
-        // Send stream-end
-        currentConn.send({
-            type: 'stream-end',
-            index: i,
-            name: file.name
-        });
+            // Small delay between multiple files to ensure orderly drain
+            if (i < totalFiles - 1) {
+                await new Promise(r => setTimeout(r, 60));
+            }
+        }
     }
 
     if (!isTransferAborted) {
         const totalDurationSec = Math.max(0.1, (performance.now() - metrics.startTime) / 1000);
         const avgSpeed = metrics.transferredTotalBytes / totalDurationSec;
+        stopMetrics();
 
         setTimeout(() => {
             showSuccess(
-                `${currentFiles.length} Document(s) sent successfully!`, 
+                totalFiles > 1 
+                    ? `${totalFiles} Document(s) streamed successfully!` 
+                    : `Document streamed successfully!`, 
                 false, 
                 metrics.transferredTotalBytes, 
                 avgSpeed, 
                 totalDurationSec
             );
-            transferZone.classList.add('hidden');
-        }, 400);
+            if (transferZone) transferZone.classList.add('hidden');
+        }, 500);
     }
 }
 
-function updateProgress(val) {
-    if (progressBarFill) progressBarFill.style.width = `${val}%`;
-    if (progressPercent) progressPercent.textContent = `${val}%`;
-}
+// Receiver Accept Handler
+if (acceptBtn) {
+    acceptBtn.addEventListener('click', async () => {
+        activeWritableStream = null;
+        activeFileHandle = null;
 
-// Receiver actions
-acceptBtn.addEventListener('click', async () => {
-    // Check if Direct Disk Stream Mode is enabled for single large archive
-    const directDiskSaveToggle = document.getElementById('directDiskSaveToggle');
-    activeWritableStream = null;
-    activeFileHandle = null;
-
-    if (directDiskSaveToggle && directDiskSaveToggle.checked && 'showSaveFilePicker' in window && incomingFiles.length === 1) {
-        try {
-            const suggested = getUniqueDownloadName(incomingFiles[0].name);
-            activeFileHandle = await window.showSaveFilePicker({
-                suggestedName: suggested
-            });
-            activeWritableStream = await activeFileHandle.createWritable();
-            showToast(`Saving directly to disk: ${activeFileHandle.name}`);
-        } catch (e) {
-            console.log('Direct disk save cancelled or unsupported, fallback to memory-safe stream:', e);
-            activeWritableStream = null;
-            activeFileHandle = null;
+        // Check if Direct Disk Stream Mode is enabled for single large archive
+        if (directDiskSaveToggle && directDiskSaveToggle.checked && 'showSaveFilePicker' in window && incomingFiles.length === 1) {
+            try {
+                const suggested = getUniqueDownloadName(incomingFiles[0].name);
+                activeFileHandle = await window.showSaveFilePicker({
+                    suggestedName: suggested
+                });
+                activeWritableStream = await activeFileHandle.createWritable();
+                showToast(`Direct stream enabled: ${activeFileHandle.name}`);
+            } catch (e) {
+                console.log('Direct disk save cancelled or unsupported, fallback to memory-safe stream:', e);
+                activeWritableStream = null;
+                activeFileHandle = null;
+            }
         }
-    }
 
-    incomingModal.classList.add('hidden');
-    transferZone.classList.remove('hidden');
-    radarContainer.classList.add('hidden');
-    transferInfo.classList.remove('hidden');
+        if (incomingModal) incomingModal.classList.add('hidden');
+        if (transferZone) transferZone.classList.remove('hidden');
+        if (radarContainer) radarContainer.classList.add('hidden');
+        if (transferInfo) transferInfo.classList.remove('hidden');
 
-    const totalBatchSize = incomingFiles.reduce((acc, f) => acc + (f.size || 0), 0);
-    startMetrics('receive', totalBatchSize, incomingFiles[0]?.size || 0);
+        const totalBatchSize = incomingFiles.reduce((acc, f) => acc + (f.size || 0), 0);
+        startMetrics('receive', totalBatchSize, incomingFiles[0]?.size || 0);
 
-    if (transferBadgeText) transferBadgeText.textContent = "📥 Downloading Document";
-    transferTitle.textContent = incomingFiles.length > 1 
-        ? `Downloading Document (1/${incomingFiles.length})...`
-        : `Downloading Document...`;
-    if (progressStatusLabel) {
-        progressStatusLabel.textContent = activeWritableStream
-            ? "Direct-to-Disk Turbo Streaming..."
-            : "Requesting stream from sender...";
-    }
+        if (transferBadgeText) transferBadgeText.textContent = "📥 Downloading Document";
+        if (transferTitle) {
+            transferTitle.textContent = incomingFiles.length > 1 
+                ? `Downloading Document (1/${incomingFiles.length})...` 
+                : `Downloading Document...`;
+        }
+        if (progressStatusLabel) {
+            progressStatusLabel.textContent = activeWritableStream
+                ? "Direct-to-Disk Turbo Streaming..."
+                : "Requesting stream from sender...";
+        }
 
-    receivedBlobs = [];
-    if (currentConn && currentConn.open) {
-        currentConn.send({ type: 'accept' });
-    }
-});
-
-declineBtn.addEventListener('click', () => {
-    incomingModal.classList.add('hidden');
-    if (currentConn && currentConn.open) {
-        currentConn.send({ type: 'decline' });
-    }
-});
-
-// --- UI Helpers ---
-function updateQR() {
-    if (!myPeerId) return;
-    
-    qrContainer.innerHTML = '';
-    let text = myPeerId;
-    let label = "Scan this QR code from another device";
-    const urlDisplay = document.getElementById('urlDisplay');
-
-    if (currentQrType === 'url') {
-        const baseUrl = window.location.origin + window.location.pathname;
-        text = baseUrl + '#' + myPeerId;
-        label = "Scan this to open site on another device";
-        urlDisplay.classList.remove('hidden');
-    } else {
-        urlDisplay.classList.add('hidden');
-    }
-
-    new QRCode(qrContainer, {
-        text: text,
-        width: 160,
-        height: 160,
-        colorDark : "#0f172a",
-        colorLight : "#ffffff",
-        correctLevel : QRCode.CorrectLevel.H
+        if (currentConn) {
+            currentConn.send({ type: 'accept' });
+        }
     });
-
-    document.getElementById('qrLabel').textContent = label;
 }
 
-// Check for auto-connect in URL hash
-window.addEventListener('load', () => {
-    const hash = window.location.hash;
-    if (hash && hash.length > 1) {
-        const id = hash.substring(1);
-        if (id && id.length === 6) { // Basic length check for our 6-char IDs
-            targetIdInput.value = id;
-            tabBtns.forEach(b => b.classList.remove('active'));
-            tabContents.forEach(c => c.classList.remove('active'));
-            document.querySelector('[data-tab="receive"]').classList.add('active');
-            document.getElementById('receiveTab').classList.add('active');
-            
-            showToast("Auto-filled sender ID from link!");
+if (declineBtn) {
+    declineBtn.addEventListener('click', () => {
+        if (incomingModal) incomingModal.classList.add('hidden');
+        if (currentConn) {
+            currentConn.send({ type: 'decline' });
+        }
+    });
+}
+
+// ============================================================
+// SUCCESS MODAL & SUMMARY METRICS DISPLAY
+// ============================================================
+function showSuccess(msg, showDownload = false, totalBytes = 0, avgSpeed = 0, durationSec = 0) {
+    if (successMsgText) successMsgText.textContent = msg;
+
+    if (downloadAgainBtn) {
+        if (showDownload && receivedBlobs.length > 0 && receivedBlobs.some(r => r.blob)) {
+            downloadAgainBtn.classList.remove('hidden');
+        } else {
+            downloadAgainBtn.classList.add('hidden');
         }
     }
-});
 
-// QR Toggle Listeners
-document.getElementById('qrIdBtn').addEventListener('click', () => {
-    currentQrType = 'id';
-    document.getElementById('qrIdBtn').classList.add('active');
-    document.getElementById('qrUrlBtn').classList.remove('active');
-    updateQR();
-});
+    if (sumAvgSpeed) {
+        sumAvgSpeed.textContent = formatSpeed(avgSpeed || (durationSec > 0 ? totalBytes / durationSec : 0));
+    }
+    if (sumTimeTaken) {
+        sumTimeTaken.textContent = formatDuration(durationSec);
+    }
 
-document.getElementById('qrUrlBtn').addEventListener('click', () => {
-    currentQrType = 'url';
-    document.getElementById('qrUrlBtn').classList.add('active');
-    document.getElementById('qrIdBtn').classList.remove('active');
-    updateQR();
-});
-
-function formatBytes(bytes, decimals = 2) {
-    if (!bytes || bytes <= 0 || isNaN(bytes)) return '0 Bytes';
-    const k = 1024;
-    const dm = decimals < 0 ? 0 : decimals;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
-}
-
-function showSuccess(msg, showDownload = false, totalBytes = 0, avgSpeed = 0, durationSec = 0) {
-    successMsgText.textContent = msg;
-
-    if (showDownload && receivedBlobs.length > 0) {
-        downloadAgainBtn.classList.remove('hidden');
-
-        if (savedFilesList) {
-            savedFilesList.innerHTML = '';
+    if (savedFilesList) {
+        savedFilesList.innerHTML = '';
+        if (showDownload && receivedBlobs.length > 0) {
+            savedFilesList.classList.remove('hidden');
             receivedBlobs.forEach(item => {
                 const row = document.createElement('div');
-                row.className = 'saved-file-item';
+                row.className = 'saved-file-row';
 
                 const left = document.createElement('div');
-                left.className = 'saved-file-name-wrap';
+                left.className = 'saved-file-left';
 
                 const icon = document.createElement('i');
                 icon.setAttribute('data-lucide', getFileIcon(item.name));
@@ -1158,21 +909,19 @@ function showSuccess(msg, showDownload = false, totalBytes = 0, avgSpeed = 0, du
                 const nameSpan = document.createElement('span');
                 nameSpan.className = 'saved-file-name';
                 nameSpan.textContent = item.name;
-                nameSpan.title = item.wasRenamed 
-                    ? `Originally: ${item.originalName} → Saved as: ${item.name}` 
-                    : item.name;
+                nameSpan.title = item.name;
 
                 left.appendChild(icon);
                 left.appendChild(nameSpan);
 
                 const right = document.createElement('div');
-                right.className = 'saved-file-meta-right';
+                right.className = 'saved-file-right';
 
                 if (item.wasRenamed) {
                     const badge = document.createElement('span');
                     badge.className = 'saved-file-badge';
                     badge.textContent = 'Numbered (duplicate)';
-                    badge.title = `File name was already in use. Saved with continuous serial number.`;
+                    badge.title = 'File name was already in use. Saved with continuous serial number.';
                     right.appendChild(badge);
                 }
 
@@ -1225,395 +974,135 @@ function showSuccess(msg, showDownload = false, totalBytes = 0, avgSpeed = 0, du
                 row.appendChild(right);
                 savedFilesList.appendChild(row);
             });
-            savedFilesList.classList.remove('hidden');
-        }
-    } else {
-        downloadAgainBtn.classList.add('hidden');
-        if (savedFilesList) {
-            savedFilesList.innerHTML = '';
+        } else {
             savedFilesList.classList.add('hidden');
         }
     }
 
-    if (transferSummaryBox && totalBytes > 0) {
-        transferSummaryBox.classList.remove('hidden');
-        if (sumTotalSize) sumTotalSize.textContent = formatBytes(totalBytes);
-        if (sumAvgSpeed) sumAvgSpeed.textContent = formatSpeed(avgSpeed);
-        if (sumTimeTaken) sumTimeTaken.textContent = durationSec < 1 ? '< 1s' : `${durationSec.toFixed(1)}s`;
-    } else if (transferSummaryBox) {
-        transferSummaryBox.classList.add('hidden');
-    }
-
-    successModal.classList.remove('hidden');
-    lucide.createIcons();
+    if (window.lucide) lucide.createIcons();
+    if (successModal) successModal.classList.remove('hidden');
 }
 
-downloadAgainBtn.addEventListener('click', () => {
-    receivedBlobs.forEach(item => {
-        const url = URL.createObjectURL(item.blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = item.name;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        setTimeout(() => URL.revokeObjectURL(url), 30000);
+if (downloadAgainBtn) {
+    downloadAgainBtn.addEventListener('click', () => {
+        receivedBlobs.forEach(item => {
+            if (item.blob) {
+                const url = URL.createObjectURL(item.blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = item.name;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                setTimeout(() => URL.revokeObjectURL(url), 20000);
+            }
+        });
     });
-});
+}
 
-closeSuccessBtn.addEventListener('click', () => {
-    successModal.classList.add('hidden');
-    if (savedFilesList) {
-        savedFilesList.innerHTML = '';
-        savedFilesList.classList.add('hidden');
+if (closeSuccessBtn) {
+    closeSuccessBtn.addEventListener('click', () => {
+        if (successModal) successModal.classList.add('hidden');
+    });
+}
+
+// ============================================================
+// PREPARE BATCH & QUICK ARCHIVE SHARING
+// ============================================================
+function prepareToSendBatch(files) {
+    if (!files || files.length === 0) return;
+    currentFiles = files;
+    const totalSize = files.reduce((acc, f) => acc + (f.size || 0), 0);
+    
+    if (fileNameText) {
+        fileNameText.textContent = files.length > 1 ? `${files.length} Files Selected` : files[0].name;
+        fileNameText.title = files.length > 1 ? `${files.length} Files Selected` : files[0].name;
     }
-    receivedBlobs = []; // Clear blobs after closing
-});
+    if (fileSizeText) {
+        fileSizeText.textContent = formatBytes(totalSize);
+    }
 
-// Copy ID
-document.getElementById('copyIdBtn').addEventListener('click', () => {
-    navigator.clipboard.writeText(myIdEl.textContent);
-    showToast("Connection ID copied!");
-});
+    if (fileTypeIcon) {
+        fileTypeIcon.setAttribute('data-lucide', getFileIcon(files[0].name));
+        if (window.lucide) lucide.createIcons();
+    }
+    
+    // Switch DropZone UI to show files are ready
+    if (dropZone) {
+        const dropZoneIcon = dropZone.querySelector('.drop-icon');
+        const dropZoneText = dropZone.querySelector('p');
+        
+        if (dropZoneIcon && dropZoneText) {
+            dropZoneIcon.setAttribute('data-lucide', 'check-circle-2');
+            dropZoneIcon.className = 'drop-icon success-pulse';
+            const fileLabel = files.length > 1 ? `${files.length} Document(s)` : files[0].name;
+            dropZoneText.innerHTML = `Ready to send: <span class="gradient-text">${fileLabel}</span><br><small>${formatBytes(totalSize)}</small>`;
+            if (window.lucide) lucide.createIcons();
+        }
+    }
 
-// Manual Connect Button
-connectBtn.addEventListener('click', () => {
-    const targetId = targetIdInput.value.trim().toUpperCase();
-    if (!targetId) {
-        showToast("Enter the ID of the receiver.", "error");
+    // Check if an archive (.zip or .rar) is among the selected files
+    checkSelectedArchiveBanner(files);
+
+    // If already connected to peer, send transfer request immediately!
+    if (currentConn && currentConn.open) {
+        currentConn.send({
+            type: 'metadata-batch',
+            files: currentFiles.map(f => ({
+                name: f.name,
+                size: f.size,
+                type: f.type || 'application/octet-stream'
+            }))
+        });
+        if (transferZone) transferZone.classList.remove('hidden');
+        if (transferTitle) transferTitle.textContent = "Waiting for Peer to Accept...";
+        if (transferBadgeText) transferBadgeText.textContent = "Request Sent";
+        if (progressStatusLabel) progressStatusLabel.textContent = "Waiting for peer approval...";
+        showToast("Files ready! Transfer request sent to connected peer.");
         return;
     }
-    if (myPeerId && targetId === myPeerId.toUpperCase()) {
-        showToast("Cannot connect to your own device ID.", "error");
-        return;
-    }
-    if (currentFiles.length > 0) {
+
+    const targetId = targetIdInput ? targetIdInput.value.trim().toUpperCase() : '';
+    if (targetId) {
         initiateSend(targetId);
     } else {
-        initiateReceive(targetId);
-    }
-});
-
-// Cancel Transfer Logic
-cancelTransferBtn.addEventListener('click', () => {
-    isTransferAborted = true;
-    metrics.active = false;
-    if (currentConn && currentConn.open) {
-        try {
-            currentConn.send({ type: 'cancel' });
-            currentConn.close();
-        } catch (e) {}
-    }
-    transferZone.classList.add('hidden');
-    if (radarContainer) radarContainer.classList.add('hidden');
-    scanning = false;
-    showToast("Transfer Aborted", "error");
-});
-
-// Method Switching Simulation
-methodIcons.forEach(icon => {
-    icon.addEventListener('click', () => {
-        methodIcons.forEach(i => i.classList.remove('active'));
-        icon.classList.add('active');
-        methodLabel.textContent = `Optimizing for ${icon.dataset.method}...`;
-        showToast(`Switched to ${icon.dataset.method} mode`);
-    });
-});
-
-// --- Logo QR Modal Logic ---
-const logoBtn = document.getElementById('logoBtn');
-const logoQrModal = document.getElementById('logoQrModal');
-const closeLogoQrBtn = document.getElementById('closeLogoQrBtn');
-const logoQrCodeContainer = document.getElementById('logoQrCodeContainer');
-let logoQrInstance = null;
-
-logoBtn.addEventListener('click', () => {
-    logoQrModal.classList.remove('hidden');
-    
-    // Generate URL including Peer ID if available
-    const baseUrl = window.location.origin + window.location.pathname;
-    const text = baseUrl + (myPeerId ? '#' + myPeerId : '');
-    
-    if (!logoQrInstance) {
-        logoQrInstance = new QRCode(logoQrCodeContainer, {
-            text: text,
-            width: 180,
-            height: 180,
-            colorDark : "#0f172a",
-            colorLight : "#ffffff",
-            correctLevel : QRCode.CorrectLevel.H
-        });
-    } else {
-        logoQrInstance.clear();
-        logoQrInstance.makeCode(text);
-    }
-});
-
-closeLogoQrBtn.addEventListener('click', () => {
-    logoQrModal.classList.add('hidden');
-});
-
-// --- Help & Connection Guide Modal Logic ---
-const syncHelpBtn = document.getElementById('syncHelpBtn');
-const helpGuideModal = document.getElementById('helpGuideModal');
-const closeHelpGuideBtn = document.getElementById('closeHelpGuideBtn');
-const closeHelpGuideBtn2 = document.getElementById('closeHelpGuideBtn2');
-
-function openHelpGuide() {
-    if (!helpGuideModal) return;
-    helpGuideModal.classList.remove('hidden');
-    syncActiveGuideMethod();
-    lucide.createIcons();
-}
-
-function closeHelpGuide() {
-    if (!helpGuideModal) return;
-    helpGuideModal.classList.add('hidden');
-}
-
-if (syncHelpBtn) {
-    syncHelpBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        openHelpGuide();
-    });
-}
-
-if (closeHelpGuideBtn) closeHelpGuideBtn.addEventListener('click', closeHelpGuide);
-if (closeHelpGuideBtn2) closeHelpGuideBtn2.addEventListener('click', closeHelpGuide);
-
-if (helpGuideModal) {
-    helpGuideModal.addEventListener('click', (e) => {
-        if (e.target === helpGuideModal) {
-            closeHelpGuide();
-        }
-    });
-}
-
-// Sync active method with guide cards
-function syncActiveGuideMethod() {
-    const activeIcon = document.querySelector('.method-icon.active');
-    const activeMethod = activeIcon ? activeIcon.dataset.method : 'Smart Connect';
-    
-    document.querySelectorAll('.help-option-card').forEach(card => {
-        const cardMethod = card.getAttribute('data-guide-method');
-        const btnSpan = card.querySelector('.option-select-btn span');
-        if (cardMethod === activeMethod) {
-            card.classList.add('active');
-            if (btnSpan) btnSpan.textContent = 'Active Mode';
-        } else {
-            card.classList.remove('active');
-            if (btnSpan) btnSpan.textContent = `Activate ${cardMethod}`;
-        }
-    });
-}
-
-// Method selection from help guide
-document.querySelectorAll('.option-select-btn').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const targetMethod = btn.getAttribute('data-method-target');
-        if (targetMethod) {
-            methodIcons.forEach(icon => {
-                if (icon.dataset.method === targetMethod) {
-                    icon.classList.add('active');
-                } else {
-                    icon.classList.remove('active');
-                }
-            });
-            methodLabel.textContent = `Optimizing for ${targetMethod}...`;
-            showToast(`Switched to ${targetMethod} mode`);
-            syncActiveGuideMethod();
-        }
-    });
-});
-
-// Allow clicking the card directly
-document.querySelectorAll('.help-option-card').forEach(card => {
-    card.addEventListener('click', () => {
-        const targetMethod = card.getAttribute('data-guide-method');
-        if (targetMethod) {
-            methodIcons.forEach(icon => {
-                if (icon.dataset.method === targetMethod) {
-                    icon.classList.add('active');
-                } else {
-                    icon.classList.remove('active');
-                }
-            });
-            methodLabel.textContent = `Optimizing for ${targetMethod}...`;
-            showToast(`Switched to ${targetMethod} mode`);
-            syncActiveGuideMethod();
-        }
-    });
-});
-
-// Global keyboard shortcuts (ESC to dismiss modals, Ctrl+R to open Test Suite)
-window.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') {
-        if (helpGuideModal && !helpGuideModal.classList.contains('hidden')) closeHelpGuide();
-        if (logoQrModal && !logoQrModal.classList.contains('hidden')) logoQrModal.classList.add('hidden');
-        if (scanModal && !scanModal.classList.contains('hidden')) stopScanner();
-    } else if ((e.ctrlKey || e.metaKey) && (e.key === 'r' || e.key === 'R')) {
-        e.preventDefault();
-        refreshConnection();
-    }
-});
-
-// --- Theme Toggle Logic ---
-const themeToggleBtn = document.getElementById('themeToggleBtn');
-
-function getStoredTheme() {
-    const saved = localStorage.getItem('sharewith-theme');
-    if (saved === 'light' || saved === 'dark') return saved;
-    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) {
-        return 'light';
-    }
-    return 'dark';
-}
-
-function updateThemeUI(theme) {
-    document.documentElement.setAttribute('data-theme', theme);
-    if (!themeToggleBtn) return;
-    
-    const isDark = theme === 'dark';
-    themeToggleBtn.innerHTML = `<i data-lucide="${isDark ? 'sun' : 'moon'}"></i>`;
-    const label = isDark ? 'Switch to light mode' : 'Switch to dark mode';
-    themeToggleBtn.setAttribute('title', label);
-    themeToggleBtn.setAttribute('aria-label', label);
-    lucide.createIcons();
-}
-
-function setTheme(theme, showNotification = false) {
-    localStorage.setItem('sharewith-theme', theme);
-    updateThemeUI(theme);
-    if (showNotification) {
-        showToast(`Theme switched to ${theme.charAt(0).toUpperCase() + theme.slice(1)} mode`);
+        showToast("Files ready. Share your ID or scan the QR code.");
     }
 }
 
-// Initialize theme UI
-updateThemeUI(getStoredTheme());
+// Zip Selected Batch Files
+async function zipSelectedBatchFiles(files) {
+    if (!files || files.length === 0) return;
+    if (!window.JSZip) {
+        showToast("ZIP engine is loading. Please try again.", "error");
+        return;
+    }
 
-if (themeToggleBtn) {
-    themeToggleBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
-        const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-        setTheme(newTheme, true);
-    });
-}
-
-// Listen to system theme preference changes if user hasn't explicitly set one
-if (window.matchMedia) {
-    window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', (e) => {
-        if (!localStorage.getItem('sharewith-theme')) {
-            updateThemeUI(e.matches ? 'light' : 'dark');
-        }
-    });
-}
-
-// --- First-Time Welcome Onboarding Notification ---
-const welcomeNotification = document.getElementById('welcomeNotification');
-const closeWelcomeBtn = document.getElementById('closeWelcomeBtn');
-const welcomeGuideBtn = document.getElementById('welcomeGuideBtn');
-const welcomeDismissBtn = document.getElementById('welcomeDismissBtn');
-
-const FIRST_TIME_WELCOME_KEY = 'sharewith-welcome-shown';
-
-function isFirstTimeUser() {
+    showToast(`Zipping ${files.length} documents into .ZIP bundle...`);
     try {
-        return !localStorage.getItem(FIRST_TIME_WELCOME_KEY);
-    } catch (e) {
-        return false;
+        const zip = new JSZip();
+        for (const file of files) {
+            zip.file(file.name, file);
+        }
+        const zipBlob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE' });
+        const zipFile = new File([zipBlob], `Batch_${files.length}_Files.zip`, { type: 'application/zip' });
+        prepareToSendBatch([zipFile]);
+        showToast(`Created "Batch_${files.length}_Files.zip" and ready to send!`);
+    } catch (err) {
+        console.error("Batch compression error:", err);
+        showToast(`Failed to zip documents: ${err.message}`, 'error');
     }
 }
 
-function showWelcomeNotification() {
-    if (!welcomeNotification) return;
-    welcomeNotification.classList.remove('hidden');
-    lucide.createIcons();
-}
-
-function dismissWelcomeNotification() {
-    if (!welcomeNotification) return;
-    welcomeNotification.classList.add('hidden');
-    try {
-        localStorage.setItem(FIRST_TIME_WELCOME_KEY, 'true');
-    } catch (e) {}
-}
-
-function checkFirstTimeWelcome() {
-    if (isFirstTimeUser()) {
-        setTimeout(() => {
-            showWelcomeNotification();
-        }, 500);
-    }
-}
-
-if (closeWelcomeBtn) closeWelcomeBtn.addEventListener('click', dismissWelcomeNotification);
-if (welcomeDismissBtn) welcomeDismissBtn.addEventListener('click', dismissWelcomeNotification);
-if (welcomeGuideBtn) {
-    welcomeGuideBtn.addEventListener('click', () => {
-        dismissWelcomeNotification();
-        openHelpGuide();
+if (btnZipBatchFiles) {
+    btnZipBatchFiles.addEventListener('click', () => {
+        if (currentFiles.length > 1) {
+            zipSelectedBatchFiles(currentFiles);
+        }
     });
 }
 
-// Check first-time welcome notification on startup
-checkFirstTimeWelcome();
-
-// Initial Start
-initPeer();
-
-// ============================================================
-// NEW FEATURES: ARCHIVE (.ZIP / .RAR) INSPECTOR, RUNNER & APP SHARING
-// ============================================================
-
-let currentArchiveData = null;
-let currentArchiveBlob = null;
-let currentArchiveName = '';
-let activeRunnerBlobUrls = [];
-let selectedArchiveFile = null;
-
-// DOM Elements for Archive Features
-const selectedArchiveBanner = document.getElementById('selectedArchiveBanner');
-const archiveBannerTitle = document.getElementById('archiveBannerTitle');
-const archiveBannerDesc = document.getElementById('archiveBannerDesc');
-const btnInspectSelectedArchive = document.getElementById('btnInspectSelectedArchive');
-const btnRunSelectedArchive = document.getElementById('btnRunSelectedArchive');
-
-const archiveModal = document.getElementById('archiveModal');
-const archiveModalTitle = document.getElementById('archiveModalTitle');
-const archiveModalSubtitle = document.getElementById('archiveModalSubtitle');
-const closeArchiveBtn = document.getElementById('closeArchiveBtn');
-const closeArchiveBtn2 = document.getElementById('closeArchiveBtn2');
-const archiveSearchInput = document.getElementById('archiveSearchInput');
-const archiveFilesList = document.getElementById('archiveFilesList');
-const archiveSummaryText = document.getElementById('archiveSummaryText');
-const btnArchiveRunApp = document.getElementById('btnArchiveRunApp');
-const btnArchiveExtractAll = document.getElementById('btnArchiveExtractAll');
-
-const archiveRunnerModal = document.getElementById('archiveRunnerModal');
-const runnerAppTitle = document.getElementById('runnerAppTitle');
-const runnerFrame = document.getElementById('runnerFrame');
-const runnerLoader = document.getElementById('runnerLoader');
-const runnerLoaderText = document.getElementById('runnerLoaderText');
-const runnerReloadBtn = document.getElementById('runnerReloadBtn');
-const runnerFullscreenBtn = document.getElementById('runnerFullscreenBtn');
-const runnerNewTabBtn = document.getElementById('runnerNewTabBtn');
-const closeRunnerBtn = document.getElementById('closeRunnerBtn');
-
-const archivePreviewModal = document.getElementById('archivePreviewModal');
-const previewFileTitle = document.getElementById('previewFileTitle');
-const previewBody = document.getElementById('previewBody');
-const previewDownloadBtn = document.getElementById('previewDownloadBtn');
-const closePreviewBtn = document.getElementById('closePreviewBtn');
-const closePreviewBtn2 = document.getElementById('closePreviewBtn2');
-
-const navShareAppBtn = document.getElementById('navShareAppBtn');
-const btnExportAppZip = document.getElementById('btnExportAppZip');
-const btnSendAppToPeer = document.getElementById('btnSendAppToPeer');
-
-// Helper: Check if archive file is selected in Send Tab
+// Check if archive file is selected in Send Tab
 function checkSelectedArchiveBanner(files) {
     if (!selectedArchiveBanner) return;
     const archive = files.find(f => {
@@ -1627,6 +1116,11 @@ function checkSelectedArchiveBanner(files) {
         if (archiveBannerTitle) archiveBannerTitle.textContent = `Archive: ${archive.name}`;
         if (archiveBannerDesc) archiveBannerDesc.textContent = `${formatBytes(archive.size)} • Click Inspect or Run to explore`;
         
+        if (btnInspectSelectedArchive) btnInspectSelectedArchive.style.display = '';
+        if (btnZipBatchFiles) {
+            btnZipBatchFiles.style.display = files.length > 1 ? 'inline-flex' : 'none';
+        }
+
         // Check if zip contains web app HTML
         if (archive.name.toLowerCase().endsWith('.zip') && window.JSZip) {
             JSZip.loadAsync(archive).then(zip => {
@@ -1640,30 +1134,13 @@ function checkSelectedArchiveBanner(files) {
         } else if (btnRunSelectedArchive) {
             btnRunSelectedArchive.classList.add('hidden');
         }
-        if (btnInspectSelectedArchive) btnInspectSelectedArchive.style.display = '';
-        if (btnZipBatchFiles) {
-            btnZipBatchFiles.style.display = files.length > 1 ? 'inline-flex' : 'none';
-            btnZipBatchFiles.onclick = () => zipSelectedBatchFiles(files);
-        }
-        lucide.createIcons();
-    } else if (files.length > 1 && window.JSZip) {
-        selectedArchiveFile = null;
-        selectedArchiveBanner.classList.remove('hidden');
-        if (archiveBannerTitle) archiveBannerTitle.textContent = `${files.length} Files Selected`;
-        if (archiveBannerDesc) archiveBannerDesc.textContent = `Bundle all files into a single ZIP for ultra-fast transfer`;
-        if (btnInspectSelectedArchive) btnInspectSelectedArchive.style.display = 'none';
-        if (btnRunSelectedArchive) btnRunSelectedArchive.style.display = 'none';
-        if (btnZipBatchFiles) {
-            btnZipBatchFiles.style.display = 'inline-flex';
-            btnZipBatchFiles.onclick = () => zipSelectedBatchFiles(files);
-        }
-        lucide.createIcons();
+        if (window.lucide) lucide.createIcons();
     } else {
         selectedArchiveFile = null;
         selectedArchiveBanner.classList.add('hidden');
-        if (btnInspectSelectedArchive) btnInspectSelectedArchive.style.display = '';
-        if (btnRunSelectedArchive) btnRunSelectedArchive.style.display = '';
-        if (btnZipBatchFiles) btnZipBatchFiles.style.display = 'none';
+        if (btnZipBatchFiles) {
+            btnZipBatchFiles.style.display = files.length > 1 ? 'inline-flex' : 'none';
+        }
     }
 }
 
@@ -1683,80 +1160,9 @@ if (btnRunSelectedArchive) {
     });
 }
 
-// Quick Share Archive & Folder Compression Handlers
-const btnQuickArchive = document.getElementById('btnQuickArchive');
-const archiveFileInput = document.getElementById('archiveFileInput');
-const btnZipFolder = document.getElementById('btnZipFolder');
-const folderInput = document.getElementById('folderInput');
-const btnZipBatchFiles = document.getElementById('btnZipBatchFiles');
-
-if (btnQuickArchive && archiveFileInput) {
-    btnQuickArchive.addEventListener('click', () => archiveFileInput.click());
-    archiveFileInput.addEventListener('change', (e) => {
-        if (e.target.files.length > 0) {
-            prepareToSendBatch(Array.from(e.target.files));
-        }
-    });
-}
-
-// Zip entire folder and prepare for P2P share
-async function zipAndShareFolder(files) {
-    if (!files || files.length === 0) return;
-    if (!window.JSZip) {
-        showToast('ZIP compression engine is loading, please try again.', 'error');
-        return;
-    }
-
-    const firstRel = files[0].webkitRelativePath || '';
-    const folderName = firstRel.split('/')[0] || 'Folder_Bundle';
-    showToast(`Compressing "${folderName}" into ZIP...`);
-
-    try {
-        const zip = new JSZip();
-        for (const file of files) {
-            const relPath = file.webkitRelativePath || file.name;
-            zip.file(relPath, file);
-        }
-        const blob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE' });
-        const zipFile = new File([blob], `${folderName}.zip`, { type: 'application/zip' });
-        prepareToSendBatch([zipFile]);
-        showToast(`Folder "${folderName}.zip" ready to share!`);
-    } catch (err) {
-        showToast(`Folder compression failed: ${err.message}`, 'error');
-    }
-}
-
-if (btnZipFolder && folderInput) {
-    btnZipFolder.addEventListener('click', () => folderInput.click());
-    folderInput.addEventListener('change', (e) => {
-        if (e.target.files.length > 0) {
-            zipAndShareFolder(Array.from(e.target.files));
-        }
-    });
-}
-
-// Zip multiple selected files into one archive
-async function zipSelectedBatchFiles(files) {
-    if (!files || files.length === 0) return;
-    if (!window.JSZip) return;
-
-    showToast(`Compressing ${files.length} files into a single ZIP...`);
-    try {
-        const zip = new JSZip();
-        for (const f of files) {
-            zip.file(f.name, f);
-        }
-        const blob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE' });
-        const bundleName = `Bundle_${new Date().toISOString().slice(0, 10)}.zip`;
-        const zipFile = new File([blob], bundleName, { type: 'application/zip' });
-        prepareToSendBatch([zipFile]);
-        showToast(`Packaged into "${bundleName}" and ready to share!`);
-    } catch (err) {
-        showToast(`Batch compression failed: ${err.message}`, 'error');
-    }
-}
-
-// MIME Type Helper for extracted assets
+// ============================================================
+// ARCHIVE INSPECTOR & PARSER ENGINE (.ZIP & .RAR)
+// ============================================================
 function getMimeType(filePath) {
     const ext = (filePath || '').split('.').pop().toLowerCase();
     const map = {
@@ -1794,9 +1200,6 @@ async function parseRarHeader(fileOrBlob) {
     const bytes = new Uint8Array(buffer);
     const entries = [];
 
-    // Signature check
-    // RAR v4: 0x52 0x61 0x72 0x21 0x1A 0x07 0x00
-    // RAR v5: 0x52 0x61 0x72 0x21 0x1A 0x07 0x01 0x00
     const isRar4 = bytes[0] === 0x52 && bytes[1] === 0x61 && bytes[2] === 0x72 && bytes[3] === 0x21 && bytes[4] === 0x1A && bytes[5] === 0x07 && bytes[6] === 0x00;
     const isRar5 = bytes[0] === 0x52 && bytes[1] === 0x61 && bytes[2] === 0x72 && bytes[3] === 0x21 && bytes[4] === 0x1A && bytes[5] === 0x07 && bytes[6] === 0x01 && bytes[7] === 0x00;
 
@@ -1813,7 +1216,6 @@ async function parseRarHeader(fileOrBlob) {
             let headSize = view.getUint16(pos + 5, true);
 
             if (headFlags & 0x8000) {
-                // Add size
                 if (pos + 11 <= bytes.length) {
                     const addSize = view.getUint32(pos + 7, true);
                     headSize += addSize;
@@ -1821,7 +1223,6 @@ async function parseRarHeader(fileOrBlob) {
             }
 
             if (headType === 0x74 && pos + 32 <= bytes.length) {
-                // FILE_HEAD
                 const packSize = view.getUint32(pos + 7, true);
                 const unpSize = view.getUint32(pos + 11, true);
                 const nameSize = view.getUint16(pos + 26, true);
@@ -1848,7 +1249,6 @@ async function parseRarHeader(fileOrBlob) {
         }
     }
 
-    // If no entries extracted via header parse, return informative fallback entry
     if (entries.length === 0) {
         entries.push({
             path: fileOrBlob.name || 'archive_contents.rar',
@@ -2010,12 +1410,14 @@ function renderArchiveFilesList(entries, filterText = '') {
             dlBtn.className = 'archive-row-btn';
             dlBtn.innerHTML = '<i data-lucide="download"></i> Save Archive';
             dlBtn.addEventListener('click', () => {
-                const url = URL.createObjectURL(currentArchiveBlob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = currentArchiveName;
-                a.click();
-                setTimeout(() => URL.revokeObjectURL(url), 10000);
+                if (currentArchiveBlob) {
+                    const url = URL.createObjectURL(currentArchiveBlob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = currentArchiveName;
+                    a.click();
+                    setTimeout(() => URL.revokeObjectURL(url), 10000);
+                }
             });
             right.appendChild(dlBtn);
         }
@@ -2030,10 +1432,9 @@ function renderArchiveFilesList(entries, filterText = '') {
         archiveSummaryText.textContent = `${entries.length} items (${formatBytes(totalSize)} uncompressed)`;
     }
 
-    lucide.createIcons();
+    if (window.lucide) lucide.createIcons();
 }
 
-// Search Filter inside Archive Inspector
 if (archiveSearchInput) {
     archiveSearchInput.addEventListener('input', (e) => {
         if (currentArchiveData?.entries) {
@@ -2064,7 +1465,6 @@ async function extractSingleZipEntry(item) {
 if (btnArchiveExtractAll) {
     btnArchiveExtractAll.addEventListener('click', async () => {
         if (!currentArchiveData || !currentArchiveData.zipInstance) {
-            // If RAR or raw archive, trigger standard download
             if (currentArchiveBlob) {
                 const url = URL.createObjectURL(currentArchiveBlob);
                 const a = document.createElement('a');
@@ -2206,7 +1606,6 @@ async function launchArchiveRunner(fileOrBlob, fileName, targetHtmlPath = null) 
             activeRunnerBlobUrls.push(objUrl);
 
             assetMap[path] = objUrl;
-            // Also map relative path from root and normalized forms
             const normPath = path.replace(/^\.\//, '');
             assetMap[normPath] = objUrl;
             const basename = path.split('/').pop();
@@ -2216,7 +1615,6 @@ async function launchArchiveRunner(fileOrBlob, fileName, targetHtmlPath = null) 
         // Resolve main HTML and replace relative links with virtual ObjectURLs
         let htmlText = await zip.files[targetHtmlPath].async('text');
 
-        // Clean relative asset resolution
         Object.keys(assetMap).forEach(key => {
             if (!key.endsWith('.html')) {
                 const escapedKey = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -2292,7 +1690,6 @@ async function createApplicationZipBundle() {
 
     const zip = new JSZip();
 
-    // Fetch live application source files
     let htmlContent = document.documentElement.outerHTML;
     let cssContent = '';
     let jsContent = '';
@@ -2336,14 +1733,12 @@ Features:
     return await zip.generateAsync({ type: 'blob', compression: 'DEFLATE' });
 }
 
-// Nav Share App button click
 if (navShareAppBtn) {
     navShareAppBtn.addEventListener('click', () => {
         if (logoBtn) logoBtn.click();
     });
 }
 
-// Export Application as .ZIP
 if (btnExportAppZip) {
     btnExportAppZip.addEventListener('click', async () => {
         showToast('Packaging ShareWith application into .ZIP...');
@@ -2364,7 +1759,6 @@ if (btnExportAppZip) {
     });
 }
 
-// Send Application directly to Peer over P2P
 if (btnSendAppToPeer) {
     btnSendAppToPeer.addEventListener('click', async () => {
         showToast('Bundling application for direct P2P transfer...');
@@ -2372,14 +1766,11 @@ if (btnSendAppToPeer) {
             const blob = await createApplicationZipBundle();
             const appFile = new File([blob], 'ShareWith-Application.zip', { type: 'application/zip' });
 
-            // Close modal
             if (logoQrModal) logoQrModal.classList.add('hidden');
 
-            // Switch to Send tab
             const sendTabBtn = document.querySelector('[data-tab="send"]');
             if (sendTabBtn) sendTabBtn.click();
 
-            // Prepare send batch with the packaged app
             prepareToSendBatch([appFile]);
             showToast('ShareWith packaged! Share your ID or connect to send.');
         } catch (err) {
@@ -2388,7 +1779,478 @@ if (btnSendAppToPeer) {
     });
 }
 
+// ============================================================
+// UI HELPERS, QR CODE & SCANNER LOGIC
+// ============================================================
+function updateQR() {
+    if (!myPeerId || !qrContainer) return;
+    
+    qrContainer.innerHTML = '';
+    let text = myPeerId;
+    let label = "Scan this QR code from another device";
+    const urlDisplay = document.getElementById('urlDisplay');
 
+    if (currentQrType === 'url') {
+        const baseUrl = window.location.origin + window.location.pathname;
+        text = baseUrl + '#' + myPeerId;
+        label = "Scan this to open site on another device";
+        if (urlDisplay) urlDisplay.classList.remove('hidden');
+    } else {
+        if (urlDisplay) urlDisplay.classList.add('hidden');
+    }
 
+    new QRCode(qrContainer, {
+        text: text,
+        width: 160,
+        height: 160,
+        colorDark : "#0f172a",
+        colorLight : "#ffffff",
+        correctLevel : QRCode.CorrectLevel.H
+    });
 
+    const qrLabel = document.getElementById('qrLabel');
+    if (qrLabel) qrLabel.textContent = label;
+}
 
+function generateQR(id) {
+    myPeerId = id;
+    updateQR();
+}
+
+window.addEventListener('load', () => {
+    const hash = window.location.hash;
+    if (hash && hash.length > 1) {
+        const id = hash.substring(1);
+        if (id && id.length === 6) {
+            if (targetIdInput) targetIdInput.value = id;
+            tabBtns.forEach(b => b.classList.remove('active'));
+            tabContents.forEach(c => c.classList.remove('active'));
+            const rTabBtn = document.querySelector('[data-tab="receive"]');
+            if (rTabBtn) rTabBtn.classList.add('active');
+            const rTabContent = document.getElementById('receiveTab');
+            if (rTabContent) rTabContent.classList.add('active');
+            
+            showToast("Auto-filled sender ID from link!");
+        }
+    }
+});
+
+const qrIdBtn = document.getElementById('qrIdBtn');
+const qrUrlBtn = document.getElementById('qrUrlBtn');
+
+if (qrIdBtn) {
+    qrIdBtn.addEventListener('click', () => {
+        currentQrType = 'id';
+        qrIdBtn.classList.add('active');
+        if (qrUrlBtn) qrUrlBtn.classList.remove('active');
+        updateQR();
+    });
+}
+
+if (qrUrlBtn) {
+    qrUrlBtn.addEventListener('click', () => {
+        currentQrType = 'url';
+        qrUrlBtn.classList.add('active');
+        if (qrIdBtn) qrIdBtn.classList.remove('active');
+        updateQR();
+    });
+}
+
+const copyIdBtn = document.getElementById('copyIdBtn');
+if (copyIdBtn) {
+    copyIdBtn.addEventListener('click', () => {
+        if (myIdEl) {
+            navigator.clipboard.writeText(myIdEl.textContent);
+            showToast("Connection ID copied!");
+        }
+    });
+}
+
+// QR Scanner Logic
+async function startScanner() {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        showToast("Scanner requires HTTPS or localhost.", "error");
+        return;
+    }
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+        if (scanVideo) {
+            scanVideo.srcObject = stream;
+            scanVideo.setAttribute("playsinline", true);
+            scanVideo.play();
+        }
+        scanning = true;
+        if (scanModal) scanModal.classList.remove('hidden');
+        requestAnimationFrame(tick);
+    } catch (err) {
+        showToast("Camera access denied.", "error");
+        console.error(err);
+    }
+}
+
+function stopScanner() {
+    scanning = false;
+    if (scanVideo && scanVideo.srcObject) {
+        scanVideo.srcObject.getTracks().forEach(track => track.stop());
+    }
+    if (scanModal) scanModal.classList.add('hidden');
+}
+
+function tick() {
+    if (!scanning || !scanVideo) return;
+    if (scanVideo.readyState === scanVideo.HAVE_ENOUGH_DATA) {
+        canvasElement.height = scanVideo.videoHeight;
+        canvasElement.width = scanVideo.videoWidth;
+        canvas.drawImage(scanVideo, 0, 0, canvasElement.width, canvasElement.height);
+        
+        const imageData = canvas.getImageData(0, 0, canvasElement.width, canvasElement.height);
+        if (window.jsQR) {
+            const code = jsQR(imageData.data, imageData.width, imageData.height, {
+                inversionAttempts: "dontInvert",
+            });
+
+            if (code) {
+                console.log("Found QR code", code.data);
+                showToast("ID Found! Connecting...");
+                if (targetIdInput) targetIdInput.value = code.data;
+                stopScanner();
+                
+                if (currentFiles.length > 0) {
+                    initiateSend(code.data);
+                } else {
+                    initiateReceive(code.data);
+                }
+            }
+        }
+    }
+    requestAnimationFrame(tick);
+}
+
+if (scanQrBtn) scanQrBtn.addEventListener('click', startScanner);
+if (closeScanBtn) closeScanBtn.addEventListener('click', stopScanner);
+
+// Tab Switching
+tabBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+        tabBtns.forEach(b => b.classList.remove('active'));
+        tabContents.forEach(c => c.classList.remove('active'));
+        
+        btn.classList.add('active');
+        const content = document.getElementById(btn.dataset.tab + 'Tab');
+        if (content) content.classList.add('active');
+    });
+});
+
+// File Selection & Drag & Drop
+if (dropZone && fileInput) {
+    dropZone.addEventListener('click', () => fileInput.click());
+
+    fileInput.addEventListener('change', (e) => {
+        if (e.target.files.length > 0) {
+            prepareToSendBatch(Array.from(e.target.files));
+        }
+    });
+
+    dropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropZone.classList.add('dragover');
+    });
+
+    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+
+    dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('dragover');
+        if (e.dataTransfer.files.length > 0) {
+            prepareToSendBatch(Array.from(e.dataTransfer.files));
+        }
+    });
+}
+
+function initiateSend(targetId) {
+    if (!peer) return;
+    
+    if (transferZone) transferZone.classList.remove('hidden');
+    if (radarContainer) radarContainer.classList.remove('hidden');
+    if (transferInfo) transferInfo.classList.add('hidden');
+    if (progressBarFill) progressBarFill.style.width = '0%';
+    if (progressPercent) progressPercent.textContent = '0%';
+
+    setTimeout(() => {
+        const conn = peer.connect(targetId);
+        handleConnection(conn);
+
+        conn.on('open', () => {
+            if (radarContainer) radarContainer.classList.add('hidden');
+            if (transferInfo) transferInfo.classList.remove('hidden');
+            if (transferTitle) transferTitle.textContent = "Requesting Access...";
+        });
+        
+        conn.on('error', () => {
+            showToast("Device Discovery Failed", "error");
+            if (transferZone) transferZone.classList.add('hidden');
+        });
+    }, 1500);
+}
+
+function initiateReceive(targetId) {
+    if (!peer) return;
+
+    if (transferZone) transferZone.classList.remove('hidden');
+    if (radarContainer) radarContainer.classList.remove('hidden');
+    if (transferInfo) transferInfo.classList.add('hidden');
+    if (progressBarFill) progressBarFill.style.width = '0%';
+    if (progressPercent) progressPercent.textContent = '0%';
+
+    setTimeout(() => {
+        const conn = peer.connect(targetId);
+        handleConnection(conn);
+
+        conn.on('open', () => {
+            if (radarContainer) radarContainer.classList.add('hidden');
+            if (transferInfo) transferInfo.classList.remove('hidden');
+            if (transferTitle) transferTitle.textContent = "Connecting to Host...";
+        });
+
+        conn.on('error', () => {
+            showToast("Connection to Host Failed", "error");
+            if (transferZone) transferZone.classList.add('hidden');
+        });
+    }, 1200);
+}
+
+// Connect Button Click
+if (connectBtn) {
+    connectBtn.addEventListener('click', () => {
+        const targetId = targetIdInput ? targetIdInput.value.trim().toUpperCase() : '';
+        if (!targetId) {
+            showToast("Enter the ID of the receiver.", "error");
+            return;
+        }
+        if (myPeerId && targetId === myPeerId.toUpperCase()) {
+            showToast("Cannot connect to your own device ID.", "error");
+            return;
+        }
+        if (currentFiles.length > 0) {
+            initiateSend(targetId);
+        } else {
+            initiateReceive(targetId);
+        }
+    });
+}
+
+// Cancel Transfer
+if (cancelTransferBtn) {
+    cancelTransferBtn.addEventListener('click', () => {
+        isTransferAborted = true;
+        if (currentConn) {
+            currentConn.close();
+        }
+        if (transferZone) transferZone.classList.add('hidden');
+        if (radarContainer) radarContainer.classList.add('hidden');
+        scanning = false;
+        stopMetrics();
+        showToast("Transfer Aborted", "error");
+    });
+}
+
+// Method Switching Simulation
+methodIcons.forEach(icon => {
+    icon.addEventListener('click', () => {
+        methodIcons.forEach(i => i.classList.remove('active'));
+        icon.classList.add('active');
+        if (methodLabel) methodLabel.textContent = `Optimizing for ${icon.dataset.method}...`;
+        showToast(`Switched to ${icon.dataset.method} mode`);
+    });
+});
+
+// Logo QR Modal
+if (logoBtn && logoQrModal) {
+    logoBtn.addEventListener('click', () => {
+        logoQrModal.classList.remove('hidden');
+        const baseUrl = window.location.origin + window.location.pathname;
+        const text = baseUrl + (myPeerId ? '#' + myPeerId : '');
+        
+        if (logoQrCodeContainer) {
+            if (!logoQrInstance) {
+                logoQrInstance = new QRCode(logoQrCodeContainer, {
+                    text: text,
+                    width: 180,
+                    height: 180,
+                    colorDark : "#0f172a",
+                    colorLight : "#ffffff",
+                    correctLevel : QRCode.CorrectLevel.H
+                });
+            } else {
+                logoQrInstance.clear();
+                logoQrInstance.makeCode(text);
+            }
+        }
+    });
+}
+
+if (closeLogoQrBtn && logoQrModal) {
+    closeLogoQrBtn.addEventListener('click', () => {
+        logoQrModal.classList.add('hidden');
+    });
+}
+
+// Help Guide Modal
+const syncHelpBtn = document.getElementById('syncHelpBtn');
+const helpGuideModal = document.getElementById('helpGuideModal');
+const closeHelpGuideBtn = document.getElementById('closeHelpGuideBtn');
+const closeHelpGuideBtn2 = document.getElementById('closeHelpGuideBtn2');
+
+function openHelpGuide() {
+    if (!helpGuideModal) return;
+    helpGuideModal.classList.remove('hidden');
+    syncActiveGuideMethod();
+    if (window.lucide) lucide.createIcons();
+}
+
+function closeHelpGuide() {
+    if (!helpGuideModal) return;
+    helpGuideModal.classList.add('hidden');
+}
+
+if (syncHelpBtn) {
+    syncHelpBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        openHelpGuide();
+    });
+}
+
+if (closeHelpGuideBtn) closeHelpGuideBtn.addEventListener('click', closeHelpGuide);
+if (closeHelpGuideBtn2) closeHelpGuideBtn2.addEventListener('click', closeHelpGuide);
+
+if (helpGuideModal) {
+    helpGuideModal.addEventListener('click', (e) => {
+        if (e.target === helpGuideModal) {
+            closeHelpGuide();
+        }
+    });
+}
+
+function syncActiveGuideMethod() {
+    const activeIcon = document.querySelector('.method-icon.active');
+    const activeMethod = activeIcon ? activeIcon.dataset.method : 'Smart Connect';
+    
+    document.querySelectorAll('.help-option-card').forEach(card => {
+        const cardMethod = card.getAttribute('data-guide-method');
+        const btnSpan = card.querySelector('.option-select-btn span');
+        if (cardMethod === activeMethod) {
+            card.classList.add('active');
+            if (btnSpan) btnSpan.textContent = 'Active Mode';
+        } else {
+            card.classList.remove('active');
+            if (btnSpan) btnSpan.textContent = `Activate ${cardMethod}`;
+        }
+    });
+}
+
+document.querySelectorAll('.option-select-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const targetMethod = btn.getAttribute('data-method-target');
+        if (targetMethod) {
+            methodIcons.forEach(icon => {
+                if (icon.dataset.method === targetMethod) {
+                    icon.classList.add('active');
+                } else {
+                    icon.classList.remove('active');
+                }
+            });
+            if (methodLabel) methodLabel.textContent = `Optimizing for ${targetMethod}...`;
+            showToast(`Switched to ${targetMethod} mode`);
+            syncActiveGuideMethod();
+        }
+    });
+});
+
+document.querySelectorAll('.help-option-card').forEach(card => {
+    card.addEventListener('click', () => {
+        const targetMethod = card.getAttribute('data-guide-method');
+        if (targetMethod) {
+            methodIcons.forEach(icon => {
+                if (icon.dataset.method === targetMethod) {
+                    icon.classList.add('active');
+                } else {
+                    icon.classList.remove('active');
+                }
+            });
+            if (methodLabel) methodLabel.textContent = `Optimizing for ${targetMethod}...`;
+            showToast(`Switched to ${targetMethod} mode`);
+            syncActiveGuideMethod();
+        }
+    });
+});
+
+// ESC Key Listener
+window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+        if (helpGuideModal && !helpGuideModal.classList.contains('hidden')) closeHelpGuide();
+        if (logoQrModal && !logoQrModal.classList.contains('hidden')) logoQrModal.classList.add('hidden');
+        if (scanModal && !scanModal.classList.contains('hidden')) stopScanner();
+        if (archiveModal && !archiveModal.classList.contains('hidden')) archiveModal.classList.add('hidden');
+        if (archiveRunnerModal && !archiveRunnerModal.classList.contains('hidden')) {
+            archiveRunnerModal.classList.add('hidden');
+            if (runnerFrame) runnerFrame.src = 'about:blank';
+            cleanupRunnerUrls();
+        }
+        if (archivePreviewModal && !archivePreviewModal.classList.contains('hidden')) archivePreviewModal.classList.add('hidden');
+    }
+});
+
+// Theme Management
+const themeToggleBtn = document.getElementById('themeToggleBtn');
+
+function getStoredTheme() {
+    const saved = localStorage.getItem('sharewith-theme');
+    if (saved === 'light' || saved === 'dark') return saved;
+    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) {
+        return 'light';
+    }
+    return 'dark';
+}
+
+function updateThemeUI(theme) {
+    document.documentElement.setAttribute('data-theme', theme);
+    if (!themeToggleBtn) return;
+    
+    const isDark = theme === 'dark';
+    themeToggleBtn.innerHTML = `<i data-lucide="${isDark ? 'sun' : 'moon'}"></i>`;
+    const label = isDark ? 'Switch to light mode' : 'Switch to dark mode';
+    themeToggleBtn.setAttribute('title', label);
+    themeToggleBtn.setAttribute('aria-label', label);
+    if (window.lucide) lucide.createIcons();
+}
+
+function setTheme(theme, showNotification = false) {
+    localStorage.setItem('sharewith-theme', theme);
+    updateThemeUI(theme);
+    if (showNotification) {
+        showToast(`Theme switched to ${theme.charAt(0).toUpperCase() + theme.slice(1)} mode`);
+    }
+}
+
+updateThemeUI(getStoredTheme());
+
+if (themeToggleBtn) {
+    themeToggleBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
+        const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+        setTheme(newTheme, true);
+    });
+}
+
+if (window.matchMedia) {
+    window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', (e) => {
+        if (!localStorage.getItem('sharewith-theme')) {
+            updateThemeUI(e.matches ? 'light' : 'dark');
+        }
+    });
+}
+
+// Initial Start
+initPeer();

@@ -22,7 +22,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <link rel="stylesheet" href="style.css">
     <script>
-        (function () {
+        (function() {
             const saved = localStorage.getItem('sharewith-theme');
             const theme = saved || (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
             document.documentElement.setAttribute('data-theme', theme);
@@ -45,17 +45,14 @@
             <div class="connection-status" id="connectionStatus">
                 <span class="status-dot offline"></span>
                 <span class="status-text">Connecting to server...</span>
-                <button type="button" class="nav-share-app-btn" id="navShareAppBtn"
-                    title="Share or Export this Application" aria-label="Share App">
+                <button type="button" class="nav-share-app-btn" id="navShareAppBtn" title="Share or Export this Application" aria-label="Share App">
                     <i data-lucide="share-2"></i>
                     <span>Share App</span>
                 </button>
-                <button type="button" class="help-info-btn" id="syncHelpBtn"
-                    title="Help: How to connect & share documents" aria-label="Connection Guide">
+                <button type="button" class="help-info-btn" id="syncHelpBtn" title="Help: How to connect & share documents" aria-label="Connection Guide">
                     <i data-lucide="info"></i>
                 </button>
-                <button type="button" class="theme-toggle-btn" id="themeToggleBtn" title="Toggle Light/Dark Theme"
-                    aria-label="Toggle Theme">
+                <button type="button" class="theme-toggle-btn" id="themeToggleBtn" title="Toggle Light/Dark Theme" aria-label="Toggle Theme">
                     <i data-lucide="sun" id="themeToggleIcon"></i>
                 </button>
             </div>
@@ -85,12 +82,8 @@
                             <span class="label">Your Connection ID:</span>
                             <div class="id-row">
                                 <code id="myId">------</code>
-                                <button class="icon-btn" id="copyIdBtn" title="Copy ID" aria-label="Copy Connection ID">
+                                <button class="icon-btn" id="copyIdBtn" title="Copy ID">
                                     <i data-lucide="copy"></i>
-                                </button>
-                                <button type="button" class="icon-btn refresh-btn" id="refreshBtn"
-                                    title="Refresh Connection & ID" aria-label="Refresh Connection">
-                                    <i data-lucide="rotate-cw" id="refreshIcon"></i>
                                 </button>
                             </div>
                         </div>
@@ -108,19 +101,6 @@
                         <div class="qr-container" id="qrcode"></div>
                         <p class="qr-label" id="qrLabel">Scan this QR code from another device</p>
 
-                        <!-- Quick Share Shortcuts Row -->
-                        <div class="quick-share-row">
-                            <button type="button" class="quick-share-chip" id="btnQuickArchive" title="Instantly browse &amp; share .ZIP or .RAR files">
-                                <i data-lucide="zap"></i>
-                                <span>Quick Share .ZIP / .RAR</span>
-                            </button>
-                            <button type="button" class="quick-share-chip" id="btnZipFolder" title="Pick an entire folder, compress to ZIP and share">
-                                <i data-lucide="folder-archive"></i>
-                                <span>Zip Folder &amp; Share</span>
-                            </button>
-                        </div>
-                        <input type="file" id="archiveFileInput" accept=".zip,.rar,.7z,.tar,.gz,application/zip,application/x-rar-compressed,application/x-zip-compressed,application/octet-stream" hidden multiple>
-                        <input type="file" id="folderInput" webkitdirectory directory hidden multiple>
 
                         <div class="file-drop-zone" id="dropZone">
                             <i data-lucide="file-plus" class="drop-icon"></i>
@@ -187,16 +167,15 @@
                                 <span class="badge-pulse"></span>
                                 <span id="transferBadgeText">Receiving Document</span>
                             </div>
-                            <h3 id="transferTitle">Receiving...</h3>
+                            <h3 id="transferTitle">Connecting...</h3>
                             <div class="secure-badge" title="End-to-End Encrypted WebRTC">
                                 <i data-lucide="shield-check" class="secure-icon"></i>
                                 <span>Encrypted</span>
                             </div>
                         </div>
-
                         <div class="file-info">
                             <div class="file-icon-box" id="fileIconBox">
-                                <i data-lucide="file-text" id="fileTypeIcon"></i>
+                                <i data-lucide="file" id="fileTypeIcon"></i>
                             </div>
                             <div class="file-details">
                                 <p id="fileNameText" title="File Name">document.pdf</p>
@@ -210,7 +189,7 @@
                         <!-- Progress Bar & Speed Telemetry -->
                         <div class="progress-container">
                             <div class="progress-meta-top">
-                                <span class="progress-status-label" id="progressStatusLabel">Downloading...</span>
+                                <span class="progress-status-label" id="progressStatusLabel">Transferring...</span>
                                 <span id="progressPercent" class="progress-percent-val">0%</span>
                             </div>
                             <div class="progress-bar">
@@ -226,8 +205,7 @@
                                     <span id="overallProgressPercent">0%</span>
                                 </div>
                                 <div class="progress-bar overall-bar">
-                                    <div id="overallProgressBarFill" class="progress-fill overall-fill"
-                                        style="width: 0%"></div>
+                                    <div id="overallProgressBarFill" class="progress-fill overall-fill" style="width: 0%"></div>
                                 </div>
                             </div>
 
@@ -257,11 +235,9 @@
                             </div>
                         </div>
 
-                        <div class="transfer-actions">
-                            <button class="cancel-btn" id="cancelTransferBtn">
-                                <i data-lucide="x-circle"></i> Cancel
-                            </button>
-                        </div>
+                        <button class="cancel-btn" id="cancelTransferBtn">
+                            <i data-lucide="x-circle"></i> Cancel
+                        </button>
                     </div>
                 </div>
             </div>
@@ -299,7 +275,7 @@
                 <div class="modal-actions">
                     <button id="declineBtn" class="text-btn">Decline</button>
                     <button id="acceptBtn" class="primary-btn">
-                        <i data-lucide="download"></i> Accept & Receive
+                        <i data-lucide="download"></i> Accept &amp; Receive
                     </button>
                 </div>
             </div>
@@ -334,7 +310,7 @@
 
                 <div class="modal-actions">
                     <button id="downloadAgainBtn" class="secondary-btn hidden">
-                        <i data-lucide="download"></i> Download / Save File
+                        <i data-lucide="download"></i> Save File
                     </button>
                     <button id="closeSuccessBtn" class="primary-btn">Done</button>
                 </div>
@@ -422,8 +398,7 @@
             <div class="archive-toolbar">
                 <div class="archive-search-wrap">
                     <i data-lucide="search" class="archive-search-icon"></i>
-                    <input type="text" id="archiveSearchInput" placeholder="Filter files inside archive..."
-                        autocomplete="off">
+                    <input type="text" id="archiveSearchInput" placeholder="Filter files inside archive..." autocomplete="off">
                 </div>
                 <div class="archive-toolbar-actions">
                     <button type="button" class="primary-btn btn-sm hidden" id="btnArchiveRunApp">
@@ -478,9 +453,7 @@
                     <div class="runner-spinner"></div>
                     <p id="runnerLoaderText">Unpacking and launching application...</p>
                 </div>
-                <iframe id="runnerFrame" class="runner-frame"
-                    sandbox="allow-scripts allow-modals allow-same-origin allow-forms allow-popups"
-                    title="Sandboxed App Execution"></iframe>
+                <iframe id="runnerFrame" class="runner-frame" sandbox="allow-scripts allow-modals allow-same-origin allow-forms allow-popups" title="Sandboxed App Execution"></iframe>
             </div>
         </div>
     </div>
@@ -537,9 +510,7 @@
 
             <div class="help-modal-body">
                 <div class="help-intro-box">
-                    <p><strong>Share With</strong> lets you send documents, photos, and files of any size directly
-                        peer-to-peer with end-to-end encryption. Select an optimization mode below to connect either
-                        online or completely offline:</p>
+                    <p><strong>Share With</strong> lets you send documents, photos, and files of any size directly peer-to-peer with end-to-end encryption. Select an optimization mode below to connect either online or completely offline:</p>
                 </div>
 
                 <div class="help-options-grid">
@@ -556,13 +527,10 @@
                             <span class="badge badge-auto">Online & Offline</span>
                         </div>
                         <p class="option-desc">
-                            Intelligent auto-routing. Detects whether devices are on the same local network or across
-                            the internet, automatically selecting the lowest-latency direct P2P data channel with zero
-                            configuration.
+                            Intelligent auto-routing. Detects whether devices are on the same local network or across the internet, automatically selecting the lowest-latency direct P2P data channel with zero configuration.
                         </p>
                         <div class="option-instruction">
-                            <strong>How to connect:</strong> Share your 6-digit Connection ID or scan the QR code. The
-                            app automatically chooses the best direct route.
+                            <strong>How to connect:</strong> Share your 6-digit Connection ID or scan the QR code. The app automatically chooses the best direct route.
                         </div>
                         <button type="button" class="option-select-btn" data-method-target="Smart Connect">
                             <i data-lucide="check"></i> <span>Activate Smart Connect</span>
@@ -582,12 +550,10 @@
                             <span class="badge badge-offline">Offline LAN</span>
                         </div>
                         <p class="option-desc">
-                            Connects devices on the same Wi-Fi network or portable Mobile Hotspot. Transfers documents
-                            directly over the local network at maximum hardware speed (50–100+ MB/s).
+                            Connects devices on the same Wi-Fi network or portable Mobile Hotspot. Transfers documents directly over the local network at maximum hardware speed (50–100+ MB/s).
                         </p>
                         <div class="option-instruction">
-                            <strong>How to connect offline:</strong> Turn on Mobile Hotspot on Device A, connect Device
-                            B to it, and open the app. No internet data quota is consumed!
+                            <strong>How to connect offline:</strong> Turn on Mobile Hotspot on Device A, connect Device B to it, and open the app. No internet data quota is consumed!
                         </div>
                         <button type="button" class="option-select-btn" data-method-target="Local Wi-Fi">
                             <i data-lucide="check"></i> <span>Activate Local Wi-Fi</span>
@@ -607,12 +573,10 @@
                             <span class="badge badge-offline">100% Offline</span>
                         </div>
                         <p class="option-desc">
-                            Short-range proximity direct connection. Designed for quick off-grid transfers when no Wi-Fi
-                            router, cables, or cellular networks are available.
+                            Short-range proximity direct connection. Designed for quick off-grid transfers when no Wi-Fi router, cables, or cellular networks are available.
                         </p>
                         <div class="option-instruction">
-                            <strong>How to connect offline:</strong> Keep both devices within 10 meters, scan the
-                            receiver's QR code or pair peer IDs for quick off-grid handshakes.
+                            <strong>How to connect offline:</strong> Keep both devices within 10 meters, scan the receiver's QR code or pair peer IDs for quick off-grid handshakes.
                         </div>
                         <button type="button" class="option-select-btn" data-method-target="Bluetooth">
                             <i data-lucide="check"></i> <span>Activate Bluetooth</span>
@@ -632,12 +596,10 @@
                             <span class="badge badge-online">Worldwide Online</span>
                         </div>
                         <p class="option-desc">
-                            Connect across different cities, ISPs, or 4G/5G mobile carriers worldwide. WebRTC STUN/TURN
-                            traversal securely tunnels through firewalls and NATs.
+                            Connect across different cities, ISPs, or 4G/5G mobile carriers worldwide. WebRTC STUN/TURN traversal securely tunnels through firewalls and NATs.
                         </p>
                         <div class="option-instruction">
-                            <strong>How to connect online:</strong> Send your share link or 6-digit ID via chat or
-                            email. The recipient connects instantly from anywhere on Earth.
+                            <strong>How to connect online:</strong> Send your share link or 6-digit ID via chat or email. The recipient connects instantly from anywhere on Earth.
                         </div>
                         <button type="button" class="option-select-btn" data-method-target="Global Link">
                             <i data-lucide="check"></i> <span>Activate Global Link</span>
@@ -650,8 +612,7 @@
                     <div class="steps-row">
                         <div class="step-item">
                             <div class="step-num">1</div>
-                            <div class="step-text"><strong>Choose Files:</strong> Drop documents or browse on the Send
-                                tab.</div>
+                            <div class="step-text"><strong>Choose Files:</strong> Drop documents or browse on the Send tab.</div>
                         </div>
                         <div class="step-item">
                             <div class="step-num">2</div>
@@ -659,8 +620,7 @@
                         </div>
                         <div class="step-item">
                             <div class="step-num">3</div>
-                            <div class="step-text"><strong>Transfer:</strong> Receiver clicks Accept. Done in seconds!
-                            </div>
+                            <div class="step-text"><strong>Transfer:</strong> Receiver clicks Accept. Done in seconds!</div>
                         </div>
                     </div>
                 </div>
@@ -669,30 +629,6 @@
             <div class="modal-actions" style="margin-top: 1.5rem; justify-content: flex-end;">
                 <button id="closeHelpGuideBtn2" class="primary-btn">Got It</button>
             </div>
-        </div>
-    </div>
-
-    <!-- First-Time Welcome Onboarding Notification -->
-    <div id="welcomeNotification" class="welcome-notification hidden" role="region" aria-label="Welcome notification">
-        <div class="welcome-header">
-            <div class="welcome-title-wrap">
-                <div class="welcome-badge-icon">
-                    <i data-lucide="sparkles"></i>
-                </div>
-                <strong>Welcome to Share With!</strong>
-            </div>
-            <button type="button" class="welcome-close-btn" id="closeWelcomeBtn"
-                aria-label="Close Welcome">&times;</button>
-        </div>
-        <p class="welcome-desc">Direct P2P file sharing with end-to-end encryption. No file size limits and zero cloud
-            storage.</p>
-        <div class="welcome-actions">
-            <button type="button" id="welcomeGuideBtn" class="welcome-btn welcome-guide-btn">
-                <i data-lucide="book-open"></i> Quick Guide
-            </button>
-            <button type="button" id="welcomeDismissBtn" class="welcome-btn welcome-gotit-btn">
-                Got it!
-            </button>
         </div>
     </div>
 
